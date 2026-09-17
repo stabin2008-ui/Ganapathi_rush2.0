@@ -1,6 +1,7 @@
 /* ==========================================================================
-   GANAPATHI RUSH 2.0 — STYLESHEET
+   GANAPATHI RUSH 2.0 — FESTIVAL STYLESHEET
    Festive Indian Palette: Deep Navy, Saffron, Warm Gold, Marigold, Cream
+   Clean Unobstructed Mobile Viewport with Modern Swipe Controls
    ========================================================================== */
 
 :root {
@@ -14,7 +15,7 @@
   --marigold-yellow: #ffba08;
   --vermillion-red: #d62828;
   --cream-white: #fff7eb;
-  --glass-bg: rgba(13, 18, 36, 0.75);
+  --glass-bg: rgba(13, 18, 36, 0.78);
   --glass-border: rgba(255, 209, 82, 0.28);
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
@@ -35,7 +36,7 @@ html, body {
   background-color: var(--bg-deep-navy);
   color: var(--cream-white);
   font-family: var(--font-family);
-  touch-action: none;
+  touch-action: none; /* Crucial for immediate swipe gestures */
 }
 
 /* ==========================================================================
@@ -50,6 +51,7 @@ html, body {
   align-items: center;
   background: radial-gradient(circle at 50% 30%, #151c38 0%, #070913 100%);
   overflow: hidden;
+  touch-action: none;
 }
 
 #gameCanvas {
@@ -62,7 +64,7 @@ html, body {
 }
 
 /* ==========================================================================
-   HUD LAYER
+   HUD LAYER (Clean & Unobstructed)
    ========================================================================== */
 .overlay-layer {
   position: absolute;
@@ -74,7 +76,7 @@ html, body {
   z-index: 10;
   display: flex;
   flex-direction: column;
-  padding: 16px 24px;
+  padding: 14px 20px;
   transition: opacity 0.25s ease;
 }
 
@@ -91,7 +93,7 @@ html, body {
 .hud-lives {
   display: flex;
   gap: 6px;
-  font-size: 26px;
+  font-size: 24px;
   filter: drop-shadow(0 0 8px rgba(214, 40, 40, 0.6));
 }
 
@@ -114,14 +116,14 @@ html, body {
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
-  padding: 6px 20px;
+  padding: 6px 18px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .score-container {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
 }
 
 .hud-label {
@@ -132,7 +134,7 @@ html, body {
 }
 
 .hud-value {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 900;
   color: var(--cream-white);
   text-shadow: 0 0 10px var(--gold-glow);
@@ -140,7 +142,7 @@ html, body {
 }
 
 .distance-container {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: #ffbe53;
   letter-spacing: 0.5px;
@@ -154,7 +156,7 @@ html, body {
 
 .hud-collectibles {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .collectible-badge {
@@ -166,17 +168,17 @@ html, body {
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
-  padding: 6px 14px;
+  padding: 5px 12px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
 .collectible-icon {
-  font-size: 18px;
+  font-size: 16px;
   filter: drop-shadow(0 0 6px var(--gold-glow));
 }
 
 .collectible-badge .hud-value {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 /* Second HUD row */
@@ -186,18 +188,19 @@ html, body {
   align-items: center;
   width: 100%;
   max-width: 1200px;
-  margin: 10px auto 0;
+  margin: 8px auto 0;
   pointer-events: auto;
+  gap: 10px;
 }
 
 .combo-badge {
   display: flex;
   flex-direction: column;
-  background: rgba(255, 107, 26, 0.2);
+  background: rgba(255, 107, 26, 0.22);
   border: 1px solid rgba(255, 107, 26, 0.5);
   border-radius: 8px;
-  padding: 4px 12px;
-  min-width: 110px;
+  padding: 4px 10px;
+  min-width: 100px;
   box-shadow: 0 0 12px var(--saffron-glow);
   transition: transform 0.15s ease;
 }
@@ -209,7 +212,7 @@ html, body {
 }
 
 .combo-text {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
   letter-spacing: 1px;
   color: var(--marigold-yellow);
@@ -232,22 +235,83 @@ html, body {
   transition: width 0.05s linear;
 }
 
+/* Compact Festival Journey & Task Tracker */
+.hud-journey-container {
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 4px 12px;
+  min-width: 220px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.journey-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--gold-primary);
+  margin-bottom: 3px;
+}
+
+.journey-progress-bar {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+
+.journey-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ff8426, #ffd152);
+  transition: width 0.3s ease;
+}
+
+.mini-task-tracker {
+  font-size: 9.5px;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.mini-task-tracker .task-item {
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.mini-task-tracker .task-item.done {
+  color: #4ade80;
+  text-decoration: line-through;
+}
+
+/* Active Power-Ups */
 .active-powerups {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
 .powerup-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   background: var(--glass-bg);
   backdrop-filter: blur(6px);
   border: 1px solid var(--gold-primary);
-  border-radius: 16px;
-  padding: 4px 10px;
-  font-size: 12px;
+  border-radius: 14px;
+  padding: 3px 8px;
+  font-size: 11px;
   font-weight: 700;
   box-shadow: 0 0 10px var(--gold-glow);
   animation: pulse-badge 1s infinite alternate;
@@ -259,7 +323,7 @@ html, body {
 }
 
 .powerup-pill .time-bar {
-  width: 32px;
+  width: 28px;
   height: 3px;
   background: rgba(255,255,255,0.2);
   border-radius: 2px;
@@ -274,16 +338,16 @@ html, body {
 
 .hud-quick-controls {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .hud-btn {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--cream-white);
-  font-size: 16px;
-  width: 38px;
-  height: 38px;
+  font-size: 15px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -300,12 +364,84 @@ html, body {
 }
 
 /* ==========================================================================
+   LANDMARK BANNER (e.g. DHOL CHOWK)
+   ========================================================================== */
+.landmark-banner {
+  position: absolute;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-15px);
+  background: linear-gradient(135deg, rgba(21, 28, 56, 0.95), rgba(9, 12, 26, 0.95));
+  border: 1.5px solid var(--gold-primary);
+  border-radius: 24px;
+  padding: 6px 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 16px var(--gold-glow);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 25;
+}
+
+.landmark-banner.active {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.landmark-icon {
+  font-size: 16px;
+}
+
+.landmark-text {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: var(--gold-primary);
+  text-shadow: 0 0 8px var(--gold-glow);
+}
+
+/* ==========================================================================
+   SWIPE TUTORIAL HINT (Auto-fades on first run)
+   ========================================================================== */
+.swipe-hint {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(13, 18, 36, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 209, 82, 0.4);
+  border-radius: 20px;
+  padding: 8px 18px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5), 0 0 12px var(--gold-glow);
+  pointer-events: none;
+  z-index: 30;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.swipe-hint strong {
+  color: var(--gold-primary);
+}
+
+.swipe-hint.show {
+  opacity: 1;
+}
+
+/* ==========================================================================
    TOASTS & FLOATING ALERTS
    ========================================================================== */
 .toast-container {
   position: absolute;
-  top: 90px;
-  right: 24px;
+  top: 115px;
+  right: 20px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -314,13 +450,13 @@ html, body {
 }
 
 .toast {
-  background: linear-gradient(135deg, rgba(214, 40, 40, 0.9), rgba(255, 107, 26, 0.9));
+  background: linear-gradient(135deg, rgba(214, 40, 40, 0.92), rgba(255, 107, 26, 0.92));
   border: 1px solid var(--gold-primary);
   border-radius: 8px;
-  padding: 8px 16px;
+  padding: 7px 14px;
   color: var(--cream-white);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 800;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 10px var(--gold-glow);
   transform: translateX(120%);
   animation: toast-slide 3.2s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
@@ -338,7 +474,7 @@ html, body {
   top: 24%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0.8);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 900;
   letter-spacing: 2px;
   color: var(--gold-primary);
@@ -354,69 +490,6 @@ html, body {
 }
 
 /* ==========================================================================
-   MOBILE TOUCH CONTROLS
-   ========================================================================== */
-.touch-controls-layer {
-  position: absolute;
-  bottom: 16px;
-  left: 0;
-  width: 100%;
-  padding: 0 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  pointer-events: none;
-  z-index: 15;
-}
-
-.touch-lane-controls, .touch-action-controls {
-  display: flex;
-  gap: 12px;
-  pointer-events: auto;
-}
-
-.touch-btn {
-  background: rgba(13, 18, 36, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1.5px solid rgba(255, 209, 82, 0.4);
-  color: var(--gold-primary);
-  font-size: 15px;
-  font-weight: 900;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
-  cursor: pointer;
-  touch-action: manipulation;
-  user-select: none;
-  -webkit-user-select: none;
-  transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
-  min-width: 54px;
-  min-height: 54px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.touch-btn-nav {
-  width: 60px;
-  height: 60px;
-  font-size: 20px;
-}
-
-.touch-btn-action {
-  padding: 0 16px;
-  height: 54px;
-  letter-spacing: 0.5px;
-}
-
-.touch-btn:active {
-  transform: scale(0.92);
-  background: rgba(255, 107, 26, 0.5);
-  border-color: var(--gold-primary);
-  box-shadow: 0 0 15px var(--gold-glow);
-}
-
-/* ==========================================================================
    SCREEN OVERLAYS (START, PAUSE, GAME OVER, FINALE)
    ========================================================================== */
 .screen-overlay {
@@ -425,7 +498,7 @@ html, body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(7, 9, 19, 0.78);
+  background: rgba(7, 9, 19, 0.82);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;
@@ -443,10 +516,10 @@ html, body {
 }
 
 .screen-card {
-  background: linear-gradient(170deg, rgba(21, 28, 56, 0.95) 0%, rgba(9, 12, 26, 0.98) 100%);
+  background: linear-gradient(170deg, rgba(21, 28, 56, 0.96) 0%, rgba(9, 12, 26, 0.98) 100%);
   border: 2px solid var(--gold-primary);
   border-radius: 20px;
-  padding: 32px 36px;
+  padding: 30px 34px;
   max-width: 540px;
   width: 90%;
   text-align: center;
@@ -465,7 +538,7 @@ html, body {
   justify-content: center;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   font-size: 24px;
 }
 
@@ -476,7 +549,7 @@ html, body {
 }
 
 .game-title {
-  font-size: 36px;
+  font-size: 34px;
   font-weight: 900;
   letter-spacing: 2px;
   background: linear-gradient(135deg, #ffffff 0%, var(--gold-primary) 50%, var(--saffron-orange) 100%);
@@ -487,7 +560,7 @@ html, body {
 }
 
 .version-tag {
-  font-size: 18px;
+  font-size: 16px;
   background: var(--saffron-orange);
   color: var(--cream-white);
   padding: 2px 8px;
@@ -497,11 +570,11 @@ html, body {
 }
 
 .game-tagline {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   color: var(--marigold-yellow);
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   text-transform: uppercase;
 }
 
@@ -509,24 +582,24 @@ html, body {
   background: rgba(255, 209, 82, 0.1);
   border: 1px dashed var(--gold-primary);
   border-radius: 8px;
-  padding: 8px 16px;
+  padding: 7px 14px;
   display: inline-flex;
   gap: 8px;
   align-items: center;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--marigold-yellow);
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .high-score-banner strong {
   color: #fff;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .menu-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
 }
 
@@ -536,9 +609,9 @@ html, body {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 13px 20px;
+  padding: 12px 20px;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 1px;
   cursor: pointer;
@@ -575,10 +648,10 @@ html, body {
 }
 
 .active-missions-preview {
-  margin-top: 18px;
+  margin-top: 16px;
   background: rgba(0, 0, 0, 0.25);
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   text-align: left;
 }
 
@@ -587,18 +660,18 @@ html, body {
   font-weight: 800;
   letter-spacing: 1px;
   color: var(--gold-primary);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .missions-list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .missions-list li {
-  font-size: 12px;
+  font-size: 11.5px;
   color: #e2e8f0;
   display: flex;
   justify-content: space-between;
@@ -610,7 +683,7 @@ html, body {
 }
 
 .trail-selector-container {
-  margin-top: 14px;
+  margin-top: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -631,9 +704,9 @@ html, body {
 }
 
 .controls-quick-hint {
-  margin-top: 16px;
+  margin-top: 14px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.65);
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -652,16 +725,16 @@ html, body {
 }
 
 .modal-card h2 {
-  font-size: 22px;
+  font-size: 20px;
   color: var(--gold-primary);
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .instructions-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 22px;
+  gap: 12px;
+  margin-bottom: 20px;
   text-align: left;
 }
 
@@ -669,101 +742,101 @@ html, body {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 209, 82, 0.15);
   border-radius: 10px;
-  padding: 12px;
+  padding: 10px;
 }
 
 .instruction-icon {
-  font-size: 24px;
+  font-size: 22px;
   margin-bottom: 4px;
 }
 
 .instruction-box h3 {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--gold-primary);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .instruction-box p {
   font-size: 11px;
   color: #cbd5e1;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 /* ==========================================================================
    GAME OVER & RESULTS GRIDS
    ========================================================================== */
 .title-sub {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 2px;
   color: var(--saffron-orange);
 }
 
 .gameover-title {
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 800;
   color: var(--gold-primary);
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .stats-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 22px;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
 .stat-cell {
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 209, 82, 0.15);
   border-radius: 10px;
-  padding: 10px 8px;
+  padding: 8px 6px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .stat-label {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   color: #94a3b8;
   letter-spacing: 0.5px;
 }
 
 .stat-val {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 900;
   color: #fff;
 }
 
 .stat-val.highlight {
   color: var(--gold-primary);
-  font-size: 22px;
+  font-size: 21px;
   text-shadow: 0 0 10px var(--gold-glow);
 }
 
 .finale-header {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .finale-title {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 900;
   color: var(--gold-primary);
   text-shadow: 0 0 20px var(--gold-glow);
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .sacred-chants {
   font-size: 18px;
   font-weight: 800;
   color: var(--saffron-orange);
-  margin: 6px 0;
+  margin: 5px 0;
   letter-spacing: 1px;
 }
 
 .finale-tagline {
-  font-size: 12px;
+  font-size: 11.5px;
   color: #cbd5e1;
 }
 
@@ -771,40 +844,51 @@ html, body {
   background: rgba(255, 209, 82, 0.08);
   border: 1px solid rgba(255, 209, 82, 0.3);
   border-radius: 10px;
-  padding: 10px;
-  font-size: 12px;
+  padding: 8px;
+  font-size: 11.5px;
   color: var(--marigold-yellow);
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 /* ==========================================================================
-   RESPONSIVE LAYOUT BREAKPOINTS
+   RESPONSIVE BREAKPOINTS (Optimized for Mobile Portrait)
    ========================================================================== */
 @media (max-width: 640px) {
   .overlay-layer {
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
   .hud-lives {
-    font-size: 20px;
+    font-size: 18px;
   }
   .hud-value {
-    font-size: 20px;
+    font-size: 18px;
   }
   .collectible-badge {
     padding: 4px 8px;
   }
   .collectible-icon {
-    font-size: 14px;
+    font-size: 13px;
   }
   .collectible-badge .hud-value {
-    font-size: 14px;
+    font-size: 13px;
+  }
+  .hud-journey-container {
+    min-width: 150px;
+    padding: 3px 8px;
+  }
+  .journey-header {
+    font-size: 9px;
+  }
+  .mini-task-tracker {
+    max-width: 160px;
+    font-size: 8.5px;
   }
   .screen-card {
-    padding: 24px 18px;
+    padding: 22px 16px;
     width: 95%;
   }
   .game-title {
-    font-size: 26px;
+    font-size: 25px;
   }
   .instructions-grid {
     grid-template-columns: 1fr;
@@ -812,23 +896,5 @@ html, body {
   }
   .stats-summary-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-  .touch-btn-nav {
-    width: 54px;
-    height: 54px;
-  }
-  .touch-btn-action {
-    height: 50px;
-    padding: 0 12px;
-    font-size: 13px;
-  }
-}
-
-@media (min-width: 769px) {
-  /* On wide desktop screens without touch, hide touch controls */
-  @media (hover: hover) and (pointer: fine) {
-    #touchControls {
-      display: none;
-    }
   }
 }

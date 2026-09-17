@@ -1,7 +1,7 @@
 /**
  * ============================================================================
- * GANAPATHI RUSH 2.0 — MASTER GAME ENGINE
- * Fast-Paced 3-Lane Ganesh Chaturthi Festival Runner
+ * GANAPATHI RUSH 2.0 — MASTER FESTIVAL RUNNER ENGINE
+ * "Run • Collect • Celebrate • Reach Bappa"
  * Built completely from scratch with HTML5 Canvas 2D & Web Audio API
  * ============================================================================
  */
@@ -34,9 +34,9 @@ const CONFIG = {
   PLAYER_SLIDE_H: 0.25,
   HIT_DEPTH_THRESHOLD: 32,
 
-  // Milestones & Progression
-  VISARJAN_DISTANCE: 2600,// Distance to trigger Grand Visarjan Finale
-  INVULNERABLE_TIME: 1.25,// Post-hit invulnerability duration
+  // Destination & Milestones
+  DESTINATION_DISTANCE: 2400, // Distance to reach Grand Ganesha Pandal
+  INVULNERABLE_TIME: 1.25,    // Post-hit invulnerability duration
 
   // Audio Volumes
   SFX_VOLUME: 0.55,
@@ -344,6 +344,24 @@ class AudioManager {
     });
   }
 
+  // Landmark Arrival Chime
+  playLandmarkChime() {
+    if (!this.unlocked || this.isMuted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, t + i * 0.08);
+      gain.gain.setValueAtTime(0.16, t + i * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.08 + 0.8);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t + i * 0.08);
+      osc.stop(t + i * 0.08 + 0.8);
+    });
+  }
+
   // Game Over: Solemn descending harmonic drone
   playGameOver() {
     if (!this.unlocked || this.isMuted || !this.ctx) return;
@@ -368,19 +386,19 @@ class AudioManager {
   playFinale() {
     if (!this.unlocked || this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 12; i++) {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(100 + i * 20, t + i * 0.08);
+      osc.frequency.setValueAtTime(100 + i * 18, t + i * 0.07);
 
-      gain.gain.setValueAtTime(0.28, t + i * 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.15);
+      gain.gain.setValueAtTime(0.28, t + i * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.07 + 0.16);
 
       osc.connect(gain);
       gain.connect(this.sfxGain);
-      osc.start(t + i * 0.08);
-      osc.stop(t + i * 0.08 + 0.15);
+      osc.start(t + i * 0.07);
+      osc.stop(t + i * 0.07 + 0.16);
     }
   }
 
@@ -521,7 +539,7 @@ class PerspectiveEngine {
 // 4. PARTICLE SYSTEM (Object Pooled)
 // ----------------------------------------------------------------------------
 class ParticleSystem {
-  constructor(maxParticles = 350) {
+  constructor(maxParticles = 400) {
     this.pool = [];
     for (let i = 0; i < maxParticles; i++) {
       this.pool.push({
@@ -644,7 +662,6 @@ class Player {
     this.invulnerableTimer = 0;
     this.trailType = 'sparkle';
 
-    // Base dimensions at scale 1.0 (player plane Z = 0)
     this.baseWidth = 84;
     this.baseHeight = 120;
   }
@@ -829,10 +846,7 @@ class Player {
     // SLIDE POSE vs RUN / JUMP POSE
     // ==========================================
     if (this.isSliding) {
-      // ----------------------------------------
       // Low Crouch Sliding Posture
-      // ----------------------------------------
-      // Sliding dust
       ctx.fillStyle = 'rgba(255, 209, 82, 0.3)';
       ctx.beginPath();
       ctx.ellipse(-10, -8, 40, 14, -0.2, 0, Math.PI * 2);
@@ -878,11 +892,7 @@ class Player {
       ctx.fill();
 
     } else {
-      // ----------------------------------------
       // Standing / Running / Jumping Posture
-      // ----------------------------------------
-
-      // Legs (Dhoti)
       ctx.save();
       ctx.translate(0, -32 + runBounce);
 
@@ -893,10 +903,8 @@ class Player {
       ctx.beginPath();
       ctx.roundRect(-16, 0, 12, 32, 6);
       ctx.fill();
-      // Gold dhoti hem
       ctx.fillStyle = '#ffd152';
       ctx.fillRect(-16, 26, 12, 6);
-      // Foot
       ctx.fillStyle = '#7a3e1d';
       ctx.fillRect(-18, 30, 16, 6);
       ctx.restore();
@@ -908,10 +916,8 @@ class Player {
       ctx.beginPath();
       ctx.roundRect(4, 0, 12, 32, 6);
       ctx.fill();
-      // Gold dhoti hem
       ctx.fillStyle = '#ffd152';
       ctx.fillRect(4, 26, 12, 6);
-      // Foot
       ctx.fillStyle = '#7a3e1d';
       ctx.fillRect(4, 30, 16, 6);
       ctx.restore();
@@ -922,7 +928,7 @@ class Player {
       ctx.save();
       ctx.translate(0, -68 + runBounce);
 
-      // Fluttering Sash / Uttariya in back
+      // Fluttering Sash / Uttariya
       ctx.fillStyle = '#ffd152';
       ctx.beginPath();
       const sashWave = Math.sin(this.runCycle * 1.5) * 8;
@@ -978,7 +984,7 @@ class Player {
       ctx.beginPath();
       ctx.arc(0, 26, 4.5, 0, Math.PI * 2);
       ctx.fill();
-      // Little marigold flower in hand
+      // Marigold flower in hand
       ctx.fillStyle = '#ffba08';
       ctx.beginPath();
       ctx.arc(2, 28, 4, 0, Math.PI * 2);
@@ -1039,7 +1045,6 @@ class Player {
       ctx.fillStyle = 'rgba(255, 209, 82, 0.15)';
       ctx.fill();
 
-      // Mandala tick marks
       for (let m = 0; m < 8; m++) {
         const rad = (m * Math.PI) / 4 + (Date.now() * 0.002);
         const sx = Math.cos(rad) * (48 + shieldPulse);
@@ -1094,7 +1099,7 @@ class ObstacleManager {
     this.game = game;
     this.obstacles = [];
     this.spawnDistanceCounter = 0;
-    this.minWaveGap = 210; // Base spacing between waves
+    this.minWaveGap = 210;
   }
 
   reset() {
@@ -1106,7 +1111,16 @@ class ObstacleManager {
     const moveDist = this.game.speed * dt;
     this.spawnDistanceCounter += moveDist;
 
-    // Check spawner threshold (scales smoothly with speed to guarantee fair human reaction time)
+    // Do not spawn obstacles during final Ganesha Destination celebration
+    if (this.game.state === 'DESTINATION_CELEBRATION') {
+      for (let i = this.obstacles.length - 1; i >= 0; i--) {
+        this.obstacles[i].z -= moveDist;
+        if (this.obstacles[i].z < -60) this.obstacles.splice(i, 1);
+      }
+      return;
+    }
+
+    // Check spawner threshold (scales smoothly with speed for human reaction time)
     const currentWaveGap = this.minWaveGap + (this.game.speed - CONFIG.BASE_SPEED) * 0.55;
     if (this.spawnDistanceCounter >= currentWaveGap) {
       this.spawnDistanceCounter = 0;
@@ -1118,10 +1132,9 @@ class ObstacleManager {
       const obs = this.obstacles[i];
       obs.z -= moveDist;
 
-      // Check Near-Miss (when obstacle just passed the player plane: z < 0 && z > -35)
+      // Check Near-Miss (when obstacle just passed player plane: z < 0 && z > -40)
       if (!obs.nearMissChecked && obs.z < 0 && obs.z > -40) {
         obs.nearMissChecked = true;
-        // If obstacle is adjacent to player lane and player didn't hit it
         const laneDiff = Math.abs(this.game.player.currentLaneX - (obs.lane - 1));
         if (laneDiff < 0.85 && !obs.hit) {
           this.game.triggerNearMiss(obs);
@@ -1138,11 +1151,8 @@ class ObstacleManager {
   // GUARANTEED FAIRNESS: AT LEAST ONE SAFE LANE ALWAYS FREE
   spawnWave() {
     const obstacleTypes = ['BARRICADE', 'DHOL', 'TORAN', 'CRATES', 'CART'];
-    // Random safe lane: 0 (Left), 1 (Center), 2 (Right)
     const safeLane = Math.floor(Math.random() * 3);
 
-    // Number of obstacles in this wave (1 or 2, NEVER 3)
-    // 0-400m: strictly 1 obstacle per wave. 400m+: sometimes 2 obstacles.
     const allowTwo = this.game.distance > 400 && Math.random() < 0.45;
     const occupiedLanes = [];
 
@@ -1155,14 +1165,13 @@ class ObstacleManager {
 
     occupiedLanes.forEach(lane => {
       let type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
-      // Overhead Toran (requires slide) only appears after 300m
       if (type === 'TORAN' && this.game.distance < 300) {
         type = 'BARRICADE';
       }
 
       this.obstacles.push({
         type: type,
-        lane: lane,          // 0, 1, 2
+        lane: lane,
         z: CONFIG.ROAD_LENGTH,
         hit: false,
         nearMissChecked: false,
@@ -1173,7 +1182,6 @@ class ObstacleManager {
   }
 
   render(ctx) {
-    // Sort back-to-front for proper depth ordering
     const sorted = [...this.obstacles].sort((a, b) => b.z - a.z);
 
     sorted.forEach(obs => {
@@ -1210,13 +1218,11 @@ class ObstacleManager {
 
   // 1. Festival Barricade (Ground: Jump or switch lane)
   renderBarricade(ctx) {
-    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
     ctx.ellipse(0, 0, 36, 10, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Wooden barrier slats
     ctx.fillStyle = '#92400e';
     ctx.fillRect(-34, -48, 68, 12);
     ctx.fillRect(-34, -28, 68, 10);
@@ -1229,12 +1235,10 @@ class ObstacleManager {
       ctx.fill();
     }
 
-    // Legs
     ctx.fillStyle = '#78350f';
     ctx.fillRect(-28, -48, 8, 48);
     ctx.fillRect(20, -48, 8, 48);
 
-    // Hazard Stripes
     ctx.fillStyle = '#f59e0b';
     ctx.beginPath();
     ctx.moveTo(-18, -48); ctx.lineTo(-10, -48); ctx.lineTo(-20, -36); ctx.lineTo(-28, -36); ctx.fill();
@@ -1243,13 +1247,11 @@ class ObstacleManager {
 
   // 2. Large Dhol Drum (Ground: Jump or switch lane)
   renderDhol(ctx) {
-    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
     ctx.ellipse(0, 0, 34, 12, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Wooden stand
     ctx.strokeStyle = '#5c2c16';
     ctx.lineWidth = 5;
     ctx.beginPath();
@@ -1257,20 +1259,17 @@ class ObstacleManager {
     ctx.moveTo(4, 0); ctx.lineTo(14, -24); ctx.lineTo(24, 0);
     ctx.stroke();
 
-    // Cylindrical Drum Barrel (Dholak)
     ctx.fillStyle = '#854d0e';
     ctx.beginPath();
     ctx.ellipse(0, -34, 30, 18, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Rims with gold tension rings
     ctx.fillStyle = '#e2e8f0';
     ctx.beginPath();
     ctx.ellipse(-26, -34, 6, 16, 0, 0, Math.PI * 2);
     ctx.ellipse(26, -34, 6, 16, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Cross tuning cords
     ctx.strokeStyle = '#ffd152';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -1278,7 +1277,6 @@ class ObstacleManager {
     ctx.moveTo(-24, -22); ctx.lineTo(24, -46);
     ctx.stroke();
 
-    // Drumsticks (Tasha sticks)
     ctx.strokeStyle = '#ff6b1a';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -1288,30 +1286,25 @@ class ObstacleManager {
 
   // 3. Overhead Festival Toran (High: Slide under or switch lane)
   renderToran(ctx) {
-    // Side Bamboo Pillars
     ctx.fillStyle = '#ca8a04';
     ctx.fillRect(-38, -125, 8, 125);
     ctx.fillRect(30, -125, 8, 125);
 
-    // Decorative Hanging Arch Bar
     ctx.fillStyle = '#d62828';
     ctx.fillRect(-42, -125, 84, 14);
 
-    // Gold Temple Motif on Arch
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
     ctx.arc(0, -125, 14, Math.PI, Math.PI * 2);
     ctx.fill();
 
-    // Hanging Marigold Garlands & Mango Leaves (Requires sliding under!)
     const hangingY = -110;
-    ctx.fillStyle = '#ffba08'; // Marigold
+    ctx.fillStyle = '#ffba08';
     for (let m = -34; m <= 34; m += 12) {
       ctx.beginPath();
       ctx.arc(m, hangingY + Math.sin(m * 0.2) * 6, 6, 0, Math.PI * 2);
       ctx.fill();
 
-      // Green mango leaf pendant
       ctx.fillStyle = '#16a34a';
       ctx.beginPath();
       ctx.moveTo(m, hangingY + 6);
@@ -1322,7 +1315,6 @@ class ObstacleManager {
       ctx.fillStyle = '#ffba08';
     }
 
-    // "SLIDE!" prompt banner under the toran
     ctx.fillStyle = 'rgba(214, 40, 40, 0.9)';
     ctx.fillRect(-22, -88, 44, 14);
     ctx.fillStyle = '#fff';
@@ -1333,26 +1325,22 @@ class ObstacleManager {
 
   // 4. Flower & Fruit Crates (Ground: Jump or switch lane)
   renderCrates(ctx) {
-    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
     ctx.ellipse(0, 0, 32, 10, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Wooden boxes stacked
     ctx.fillStyle = '#78350f';
     ctx.fillRect(-28, -32, 28, 32);
     ctx.fillRect(0, -24, 28, 24);
 
-    // Fruit & floral offerings overflowing
-    ctx.fillStyle = '#ea580c'; // Coconuts/oranges
+    ctx.fillStyle = '#ea580c';
     ctx.beginPath();
     ctx.arc(-14, -36, 6, 0, Math.PI * 2);
     ctx.arc(-6, -34, 5, 0, Math.PI * 2);
     ctx.arc(14, -28, 6, 0, Math.PI * 2);
     ctx.fill();
 
-    // Marigold petals
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
     ctx.arc(-18, -34, 4, 0, Math.PI * 2);
@@ -1362,13 +1350,11 @@ class ObstacleManager {
 
   // 5. Festival Push Cart (Wide Ground: Switch lane)
   renderCart(ctx) {
-    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.beginPath();
     ctx.ellipse(0, 0, 38, 12, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Wheels
     ctx.fillStyle = '#451a03';
     ctx.beginPath();
     ctx.arc(-26, -12, 12, 0, Math.PI * 2);
@@ -1380,11 +1366,9 @@ class ObstacleManager {
     ctx.arc(26, -12, 4, 0, Math.PI * 2);
     ctx.fill();
 
-    // Cart base
     ctx.fillStyle = '#b45309';
     ctx.fillRect(-34, -38, 68, 26);
 
-    // Decorative festival canopy
     ctx.fillStyle = '#d62828';
     ctx.beginPath();
     ctx.moveTo(-38, -38);
@@ -1393,7 +1377,6 @@ class ObstacleManager {
     ctx.closePath();
     ctx.fill();
 
-    // Golden tassel
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
     ctx.arc(0, -56, 4, 0, Math.PI * 2);
@@ -1420,13 +1403,11 @@ class CollectibleManager {
     const moveDist = this.game.speed * dt;
     this.spawnTimer += moveDist;
 
-    // Periodically spawn trails of Modaks and Festival Coins
     if (this.spawnTimer >= 140) {
       this.spawnTimer = 0;
       this.spawnPattern();
     }
 
-    // Magnet Attraction Logic
     const isMagnet = this.game.powerUps.isMagnetActive;
     const playerX = this.game.player.currentLaneX;
 
@@ -1445,7 +1426,6 @@ class CollectibleManager {
         const laneDiff = Math.abs(this.game.player.currentLaneX - item.laneX);
         const playerJump = this.game.player.jumpY;
 
-        // Collision logic with tolerance
         const isHeightMatch = (item.worldY === 0 && playerJump < 30) ||
                               (item.worldY > 20 && playerJump >= 18);
 
@@ -1465,22 +1445,19 @@ class CollectibleManager {
   spawnPattern() {
     const patterns = ['STRAIGHT', 'ZIGZAG', 'ARC', 'COIN_TRAIL'];
     const p = patterns[Math.floor(Math.random() * patterns.length)];
-    const baseLane = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+    const baseLane = Math.floor(Math.random() * 3) - 1;
 
     if (p === 'STRAIGHT') {
-      // 4 Modaks in a single lane
       for (let k = 0; k < 4; k++) {
         this.items.push({
           type: 'MODAK',
           laneX: baseLane,
           worldY: 0,
           z: CONFIG.ROAD_LENGTH + k * 45,
-          collected: false,
-          rot: Math.random() * Math.PI
+          collected: false
         });
       }
     } else if (p === 'ZIGZAG') {
-      // 3 Modaks weaving lanes
       for (let k = 0; k < 3; k++) {
         const lane = Math.max(-1, Math.min(1, baseLane + (k % 2 === 0 ? -1 : 1)));
         this.items.push({
@@ -1488,12 +1465,10 @@ class CollectibleManager {
           laneX: lane,
           worldY: 0,
           z: CONFIG.ROAD_LENGTH + k * 50,
-          collected: false,
-          rot: 0
+          collected: false
         });
       }
     } else if (p === 'ARC') {
-      // Arc of 4 modaks requiring a jump
       for (let k = 0; k < 4; k++) {
         const jumpElevation = Math.sin((k / 3) * Math.PI) * 48;
         this.items.push({
@@ -1501,20 +1476,17 @@ class CollectibleManager {
           laneX: baseLane,
           worldY: jumpElevation,
           z: CONFIG.ROAD_LENGTH + k * 38,
-          collected: false,
-          rot: 0
+          collected: false
         });
       }
     } else if (p === 'COIN_TRAIL') {
-      // Rare Festival Coins trail
       for (let k = 0; k < 3; k++) {
         this.items.push({
           type: 'COIN',
           laneX: baseLane,
           worldY: 0,
           z: CONFIG.ROAD_LENGTH + k * 40,
-          collected: false,
-          rot: 0
+          collected: false
         });
       }
     }
@@ -1545,22 +1517,18 @@ class CollectibleManager {
     });
   }
 
-  // Glowing Golden Modak
   renderModak(ctx) {
-    // Divine Glow Aura
     const pulse = Math.sin(Date.now() * 0.008) * 3;
     ctx.shadowColor = '#ffd152';
     ctx.shadowBlur = 12 + pulse;
 
-    // Outer Sweet Body (Teardrop / pleated dumpling)
-    ctx.fillStyle = '#fff7eb'; // Steamed rice flour base
+    ctx.fillStyle = '#fff7eb';
     ctx.beginPath();
-    ctx.moveTo(0, -26); // Pointed top
+    ctx.moveTo(0, -26);
     ctx.bezierCurveTo(16, -14, 20, 10, 0, 16);
     ctx.bezierCurveTo(-20, 10, -16, -14, 0, -26);
     ctx.fill();
 
-    // Saffron / Jaggery Center Glow & Pleat Ridges
     ctx.strokeStyle = '#f39c12';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -1569,35 +1537,29 @@ class CollectibleManager {
     ctx.moveTo(2, -22); ctx.quadraticCurveTo(10, 0, 6, 12);
     ctx.stroke();
 
-    // Golden Kalgi Sparkle on top tip
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
     ctx.arc(0, -26, 3.5, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Festival Coin
   renderCoin(ctx) {
-    // 3D Coin Rotation Effect
     const spin = Math.cos(Date.now() * 0.007);
     ctx.scale(spin, 1);
 
     ctx.shadowColor = '#f59e0b';
     ctx.shadowBlur = 10;
 
-    // Golden Coin Rim
     ctx.fillStyle = '#f59e0b';
     ctx.beginPath();
     ctx.arc(0, 0, 16, 0, Math.PI * 2);
     ctx.fill();
 
-    // Inner Face
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
     ctx.arc(0, 0, 12, 0, Math.PI * 2);
     ctx.fill();
 
-    // Om symbol or star stamp
     ctx.fillStyle = '#d97706';
     ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
@@ -1615,7 +1577,6 @@ class PowerUpManager {
     this.tokens = [];
     this.spawnTimer = 0;
 
-    // Active power-up states
     this.hasShield = false;
     this.isMagnetActive = false;
     this.magnetTimer = 0;
@@ -1646,18 +1607,15 @@ class PowerUpManager {
     const moveDist = this.game.speed * dt;
     this.spawnTimer += moveDist;
 
-    // Periodically spawn a power-up token on the road (~every 280-350m)
     if (this.spawnTimer >= 320) {
       this.spawnTimer = 0;
       this.spawnToken();
     }
 
-    // Update floating tokens
     for (let i = this.tokens.length - 1; i >= 0; i--) {
       const tok = this.tokens[i];
       tok.z -= moveDist;
 
-      // Check Pickup
       if (Math.abs(tok.z) < 26) {
         const laneDiff = Math.abs(this.game.player.currentLaneX - (tok.lane - 1));
         if (laneDiff < 0.65) {
@@ -1672,7 +1630,6 @@ class PowerUpManager {
       }
     }
 
-    // Countdown active timers
     let hudNeedsUpdate = false;
 
     if (this.isMagnetActive) {
@@ -1795,11 +1752,9 @@ class PowerUpManager {
       ctx.translate(x, y);
       ctx.scale(scale, scale);
 
-      // Floating bobbing
       const bob = Math.sin(Date.now() * 0.007 + tok.z) * 6;
       ctx.translate(0, bob - 24);
 
-      // Rotating Token Sphere
       ctx.shadowColor = '#ffd152';
       ctx.shadowBlur = 16;
 
@@ -1812,7 +1767,6 @@ class PowerUpManager {
       ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      // Icon
       let icon = '🛡️';
       if (tok.type === 'MAGNET') icon = '🧲';
       if (tok.type === 'BOOST') icon = '⚡';
@@ -1831,54 +1785,69 @@ class PowerUpManager {
 }
 
 // ----------------------------------------------------------------------------
-// 9. ENVIRONMENT MANAGER (4 Phases, Parallax & Visarjan Finale)
+// 9. DETAILED FESTIVAL ENVIRONMENT (Roadside Scenery, Early Ganesha, 4 Phases)
 // ----------------------------------------------------------------------------
 class EnvironmentManager {
   constructor(game) {
     this.game = game;
-    this.phase = 1; // 1: Sunset, 2: Evening, 3: Night, 4: Visarjan Rush
+    this.phase = 1; // 1: Sunset, 2: Evening, 3: Night, 4: Ganesha Destination
     this.fireworks = [];
-    this.floatingDiyas = [];
-    this.skyGradient = null;
+    this.scenery = [];
 
-    // Roadside decorative element counters
-    this.diyaPoles = [];
-    for (let z = 40; z < CONFIG.ROAD_LENGTH; z += 90) {
-      this.diyaPoles.push({ z: z });
+    // Initialize recurring roadside festival scenery (both left & right)
+    const types = ['STALL_MODAK', 'STALL_FLOWERS', 'DHOL_GROUP', 'CROWD_CHEER', 'PANDAL_GATE', 'FESTIVAL_BANNER', 'RANGOLI', 'KANDIL_LIGHTS'];
+    let curZ = 40;
+    while (curZ < CONFIG.ROAD_LENGTH + 120) {
+      // Left side decoration
+      this.scenery.push({
+        side: 'LEFT',
+        x: -2.1 - Math.random() * 0.3,
+        z: curZ,
+        type: types[Math.floor(Math.random() * types.length)],
+        flip: false
+      });
+      // Right side decoration
+      this.scenery.push({
+        side: 'RIGHT',
+        x: 2.1 + Math.random() * 0.3,
+        z: curZ + 35,
+        type: types[Math.floor(Math.random() * types.length)],
+        flip: true
+      });
+      curZ += 75;
     }
   }
 
   reset() {
     this.phase = 1;
     this.fireworks = [];
-    this.floatingDiyas = [];
   }
 
   update(dt) {
     const dist = this.game.distance;
 
-    // Environment Progression Phases
+    // Progression Phases: Sunset (0-500m) -> Evening (500-1100m) -> Night (1100-1900m) -> Destination (1900m+)
     if (dist < 500) {
-      this.phase = 1; // Sunset Festival
-    } else if (dist < 1200) {
-      this.phase = 2; // Evening Celebration
-    } else if (dist < 2000) {
-      this.phase = 3; // Night Festival
+      this.phase = 1; // Festival Entrance / Sunset
+    } else if (dist < 1100) {
+      this.phase = 2; // Festival Street / Evening
+    } else if (dist < 1900) {
+      this.phase = 3; // Grand Festival Night
     } else {
-      this.phase = 4; // Visarjan Rush
+      this.phase = 4; // Ganesha Destination
     }
 
-    // Scroll Roadside Diya Lamp Posts
+    // Scroll Roadside Scenery
     const moveDist = this.game.speed * dt;
-    this.diyaPoles.forEach(pole => {
-      pole.z -= moveDist;
-      if (pole.z < 0) {
-        pole.z += CONFIG.ROAD_LENGTH;
+    this.scenery.forEach(item => {
+      item.z -= moveDist;
+      if (item.z < 0) {
+        item.z += CONFIG.ROAD_LENGTH + 80;
       }
     });
 
     // Background Fireworks in Phase 3 & 4
-    if (this.phase >= 3 && Math.random() < 0.02) {
+    if (this.phase >= 3 && Math.random() < 0.025) {
       this.spawnFirework();
     }
 
@@ -1904,11 +1873,10 @@ class EnvironmentManager {
       color: chosenColor,
       life: 1.2,
       maxLife: 1.2,
-      radius: 20 + Math.random() * 30
+      radius: 24 + Math.random() * 32
     });
 
-    // Burst sparkles
-    this.game.particles.spawn(x, y, 20, {
+    this.game.particles.spawn(x, y, 22, {
       color: chosenColor,
       minSpeed: 2,
       maxSpeed: 7,
@@ -1944,7 +1912,6 @@ class EnvironmentManager {
 
     // Stars / Celestial Moon or Sun
     if (this.phase === 1) {
-      // Warm Setting Sun
       ctx.fillStyle = 'rgba(255, 230, 150, 0.9)';
       ctx.shadowColor = '#ff6b1a';
       ctx.shadowBlur = 40;
@@ -1952,7 +1919,6 @@ class EnvironmentManager {
       ctx.arc(width * 0.72, horizon * 0.65, 36, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // Glowing Full Moon
       ctx.fillStyle = '#fff9e6';
       ctx.shadowColor = '#ffd152';
       ctx.shadowBlur = 24;
@@ -1960,10 +1926,9 @@ class EnvironmentManager {
       ctx.arc(width * 0.8, horizon * 0.42, 28, 0, Math.PI * 2);
       ctx.fill();
 
-      // Ambient Stars
       ctx.shadowBlur = 0;
       ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-      for (let s = 0; s < 30; s++) {
+      for (let s = 0; s < 35; s++) {
         const sx = (s * 137.5) % width;
         const sy = (s * 73.1) % (horizon * 0.75);
         ctx.fillRect(sx, sy, 1.5, 1.5);
@@ -1976,30 +1941,31 @@ class EnvironmentManager {
       ctx.save();
       ctx.strokeStyle = fw.color;
       ctx.globalAlpha = 1 - progress;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.arc(fw.x, fw.y, fw.radius * progress, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     });
 
-    // Parallax Silhouettes: Temple Spires, Pandal Canopies, and Ghat
+    // Parallax Silhouettes: Temple Spires, Pandal Canopies
     this.renderParallaxSilhouettes(ctx, width, horizon);
+
+    // Early Visible Ganesha Destination on the Horizon!
+    this.renderHorizonGaneshaDestination(ctx, width, horizon);
   }
 
   renderParallaxSilhouettes(ctx, width, horizon) {
     const scrollOffset = (this.game.distance * 0.15) % 400;
 
-    // Distant Temple Silhouettes
     ctx.fillStyle = this.phase === 1 ? '#4a1525' : '#070916';
     ctx.beginPath();
     ctx.moveTo(0, horizon);
 
     for (let x = -scrollOffset; x < width + 400; x += 120) {
-      // Temple Spire (Shikhara)
       ctx.lineTo(x, horizon);
       ctx.lineTo(x + 20, horizon - 28);
-      ctx.lineTo(x + 35, horizon - 58); // Shikhara tip
+      ctx.lineTo(x + 35, horizon - 58);
       ctx.lineTo(x + 50, horizon - 28);
       ctx.lineTo(x + 70, horizon - 16);
       ctx.lineTo(x + 100, horizon);
@@ -2008,7 +1974,6 @@ class EnvironmentManager {
     ctx.closePath();
     ctx.fill();
 
-    // Saffron Festival Flags fluttering on spires
     ctx.fillStyle = '#ff6b1a';
     for (let x = -scrollOffset; x < width + 400; x += 120) {
       ctx.beginPath();
@@ -2020,44 +1985,119 @@ class EnvironmentManager {
     }
   }
 
-  // Perspective 3-Lane Road, Festival Curbs & Diya Lamps
+  // EARLY VISIBLE GANESHA DESTINATION (Grows larger as distance approaches 2400m)
+  renderHorizonGaneshaDestination(ctx, width, horizon) {
+    const dist = this.game.distance;
+    const progress = Math.min(1.0, dist / CONFIG.DESTINATION_DISTANCE);
+    const centerX = width * 0.5;
+
+    // Scale from small distant golden halo to giant grand destination pandal
+    const scale = 0.22 + progress * 0.95;
+    const ganeshaY = horizon - 20 * scale;
+
+    ctx.save();
+    ctx.translate(centerX, ganeshaY);
+    ctx.scale(scale, scale);
+
+    // Radiant Golden Halo (Prabhavali)
+    const pulse = Math.sin(Date.now() * 0.005) * 6;
+    ctx.shadowColor = '#ffd152';
+    ctx.shadowBlur = 20 + progress * 25 + pulse;
+
+    ctx.strokeStyle = 'rgba(255, 209, 82, 0.85)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, -50, 48 + pulse, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 209, 82, 0.18)';
+    ctx.fill();
+
+    // Grand Pandal Arch Structure
+    if (dist > 450) {
+      ctx.fillStyle = '#991b1b'; // Deep festive crimson
+      ctx.beginPath();
+      ctx.moveTo(-75, 20);
+      ctx.lineTo(-65, -90);
+      ctx.lineTo(0, -135); // Grand Shikhara pinnacle
+      ctx.lineTo(65, -90);
+      ctx.lineTo(75, 20);
+      ctx.closePath();
+      ctx.fill();
+
+      // Golden kalash spire atop pandal
+      ctx.fillStyle = '#ffd152';
+      ctx.beginPath();
+      ctx.arc(0, -138, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(-2, -152, 4, 14);
+    }
+
+    // Stylized Lord Ganesha Silhouette / Idol
+    ctx.fillStyle = '#ffd152';
+
+    // Crown (Mukut)
+    ctx.beginPath();
+    ctx.moveTo(-16, -72);
+    ctx.lineTo(0, -100);
+    ctx.lineTo(16, -72);
+    ctx.closePath();
+    ctx.fill();
+
+    // Head & Large Ears
+    ctx.beginPath();
+    ctx.arc(0, -60, 20, 0, Math.PI * 2);
+    ctx.arc(-26, -60, 14, 0, Math.PI * 2); // Left ear
+    ctx.arc(26, -60, 14, 0, Math.PI * 2);  // Right ear
+    ctx.fill();
+
+    // Curved Trunk
+    ctx.strokeStyle = '#ffd152';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(0, -52);
+    ctx.quadraticCurveTo(8, -32, -6, -24);
+    ctx.stroke();
+
+    // Modak sweet on trunk tip
+    ctx.fillStyle = '#fff7eb';
+    ctx.beginPath();
+    ctx.arc(-7, -24, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body (Seated in divine blessing)
+    ctx.fillStyle = '#ff8426';
+    ctx.beginPath();
+    ctx.ellipse(0, -15, 32, 24, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Blessing Right Hand (Abhaya Mudra)
+    ctx.fillStyle = '#ffd152';
+    ctx.beginPath();
+    ctx.arc(-28, -22, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // Perspective Road, Curbs, Lights & Rich Procedural Roadside Scenery
   renderRoad(ctx) {
     const persp = this.game.perspective;
     const width = persp.width;
     const horizon = persp.horizonY;
     const groundBase = persp.groundBaseY;
 
-    // Ground surrounding road (Festive stone street / Visarjan riverbank)
-    ctx.fillStyle = this.phase === 4 ? '#0f1d38' : '#141728';
+    // Ground surrounding road
+    ctx.fillStyle = this.phase === 4 ? '#0e1a34' : '#141728';
     ctx.fillRect(0, horizon, width, persp.height - horizon);
 
-    // If Visarjan finale, render illuminated sacred river reflections!
-    if (this.phase === 4) {
-      const riverGrad = ctx.createLinearGradient(0, horizon, 0, groundBase);
-      riverGrad.addColorStop(0, '#0a1936');
-      riverGrad.addColorStop(1, '#0e3a6c');
-      ctx.fillStyle = riverGrad;
-      ctx.fillRect(0, horizon, width, groundBase - horizon);
-
-      // Floating diyas on water sides
-      ctx.fillStyle = '#ffd152';
-      for (let w = 0; w < 16; w++) {
-        const dx = (w * 88 + Date.now() * 0.02) % width;
-        const dy = horizon + 30 + (w * 18) % 120;
-        ctx.beginPath();
-        ctx.arc(dx, dy, 3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // 3D Road Trapezoid (Narrowing into horizon)
+    // 3D Road Trapezoid
     const pFarLeft = persp.project(-1.5, 0, CONFIG.ROAD_LENGTH);
     const pFarRight = persp.project(1.5, 0, CONFIG.ROAD_LENGTH);
     const pNearLeft = persp.project(-1.5, 0, 0);
     const pNearRight = persp.project(1.5, 0, 0);
 
     ctx.save();
-    // Road Surface
     const roadGrad = ctx.createLinearGradient(0, horizon, 0, groundBase);
     roadGrad.addColorStop(0, '#1c1f33');
     roadGrad.addColorStop(1, '#2a2d48');
@@ -2071,7 +2111,7 @@ class EnvironmentManager {
     ctx.closePath();
     ctx.fill();
 
-    // Alternating Festival Curbs (Marigold yellow & Vermillion red stripes)
+    // Alternating Festival Curbs
     const segments = 24;
     const speedOffset = (this.game.distance * 1.8) % 100;
 
@@ -2106,7 +2146,7 @@ class EnvironmentManager {
       ctx.fill();
     }
 
-    // Moving Lane Dividers (Dashes receding into depth)
+    // Moving Lane Dividers
     ctx.strokeStyle = '#fff7eb';
     ctx.lineWidth = 3;
     const dashLength = 50;
@@ -2118,7 +2158,6 @@ class EnvironmentManager {
       const zStart = dZ;
       const zEnd = Math.min(CONFIG.ROAD_LENGTH, dZ + dashLength);
 
-      // Lane Divider 1 (Between Lane 0 and Lane 1: x = -0.5)
       const pDiv1Start = persp.project(-0.5, 0, zStart);
       const pDiv1End = persp.project(-0.5, 0, zEnd);
       ctx.lineWidth = Math.max(1, 3.5 * pDiv1Start.scale);
@@ -2127,7 +2166,6 @@ class EnvironmentManager {
       ctx.lineTo(pDiv1End.x, pDiv1End.y);
       ctx.stroke();
 
-      // Lane Divider 2 (Between Lane 1 and Lane 2: x = 0.5)
       const pDiv2Start = persp.project(0.5, 0, zStart);
       const pDiv2End = persp.project(0.5, 0, zEnd);
       ctx.beginPath();
@@ -2136,63 +2174,346 @@ class EnvironmentManager {
       ctx.stroke();
     }
 
-    // Roadside Diya Lamp Posts
-    this.diyaPoles.forEach(pole => {
-      // Left side pole
-      const pLeft = persp.project(-1.75, 0, pole.z);
-      const pRight = persp.project(1.75, 0, pole.z);
-      const scale = pLeft.scale;
-
-      if (scale > 0.05) {
-        // Left Diya
-        ctx.fillStyle = '#b45309';
-        ctx.fillRect(pLeft.x - 2 * scale, pLeft.y - 24 * scale, 4 * scale, 24 * scale);
-        // Diya bowl & flame
-        ctx.fillStyle = '#ffd152';
-        ctx.beginPath();
-        ctx.arc(pLeft.x, pLeft.y - 26 * scale, 5 * scale, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Right Diya
-        ctx.fillStyle = '#b45309';
-        ctx.fillRect(pRight.x - 2 * scale, pRight.y - 24 * scale, 4 * scale, 24 * scale);
-        ctx.fillStyle = '#ffd152';
-        ctx.beginPath();
-        ctx.arc(pRight.x, pRight.y - 26 * scale, 5 * scale, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    });
+    // RENDER RICH PROCEDURAL ROADSIDE SCENERY (Sorted back-to-front)
+    this.renderRoadsideScenery(ctx);
 
     ctx.restore();
+  }
+
+  // RENDER PROCEDURAL ROADSIDE SCENERY (Stalls, Dhol Players, Crowds, Banners, Rangoli, Kandils)
+  renderRoadsideScenery(ctx) {
+    const persp = this.game.perspective;
+    const sorted = [...this.scenery].sort((a, b) => b.z - a.z);
+
+    sorted.forEach(item => {
+      const proj = persp.project(item.x, 0, item.z);
+      const scale = proj.scale;
+      if (scale <= 0.04) return;
+
+      ctx.save();
+      ctx.translate(proj.x, proj.y);
+      ctx.scale(scale * (item.flip ? -1 : 1), scale);
+
+      switch (item.type) {
+        case 'STALL_MODAK':
+          this.renderModakStall(ctx);
+          break;
+        case 'STALL_FLOWERS':
+          this.renderFlowerStall(ctx);
+          break;
+        case 'DHOL_GROUP':
+          this.renderDholGroup(ctx);
+          break;
+        case 'CROWD_CHEER':
+          this.renderCrowdCheer(ctx);
+          break;
+        case 'PANDAL_GATE':
+          this.renderPandalGate(ctx);
+          break;
+        case 'FESTIVAL_BANNER':
+          this.renderFestivalBanner(ctx);
+          break;
+        case 'RANGOLI':
+          this.renderRangoli(ctx);
+          break;
+        case 'KANDIL_LIGHTS':
+          this.renderKandilLights(ctx);
+          break;
+      }
+      ctx.restore();
+    });
+  }
+
+  // 1. Modak Sweet Stall
+  renderModakStall(ctx) {
+    // Counter
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-35, -34, 70, 34);
+
+    // Striped Canopy
+    ctx.fillStyle = '#ff8426';
+    ctx.beginPath();
+    ctx.moveTo(-42, -58);
+    ctx.lineTo(0, -74);
+    ctx.lineTo(42, -58);
+    ctx.lineTo(40, -48);
+    ctx.lineTo(-40, -48);
+    ctx.closePath();
+    ctx.fill();
+
+    // Yellow stripes
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-22, -62, 10, 14);
+    ctx.fillRect(12, -62, 10, 14);
+
+    // Bamboo pillars
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(-38, -58, 5, 58);
+    ctx.fillRect(33, -58, 5, 58);
+
+    // Modak platters on counter
+    ctx.fillStyle = '#fff7eb';
+    ctx.beginPath();
+    ctx.arc(-16, -38, 8, 0, Math.PI * 2);
+    ctx.arc(0, -40, 9, 0, Math.PI * 2);
+    ctx.arc(16, -38, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Diya lamp
+    ctx.fillStyle = '#ffd152';
+    ctx.beginPath();
+    ctx.arc(0, -48, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 2. Flower Bazaar Stall
+  renderFlowerStall(ctx) {
+    // Bamboo stall frame
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillRect(-32, -60, 4, 60);
+    ctx.fillRect(28, -60, 4, 60);
+    ctx.fillRect(-36, -62, 68, 6);
+
+    // Hanging Marigold Garlands
+    for (let g = -28; g <= 28; g += 8) {
+      const isYellow = (g % 16 === 0);
+      ctx.fillStyle = isYellow ? '#ffd152' : '#ff8426';
+      for (let y = -54; y <= -18; y += 7) {
+        ctx.beginPath();
+        ctx.arc(g, y, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Flower basket at base
+    ctx.fillStyle = '#b45309';
+    ctx.beginPath();
+    ctx.ellipse(0, -6, 26, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#d62828'; // Rose petals
+    ctx.beginPath();
+    ctx.arc(0, -10, 14, Math.PI, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 3. Dhol-Tasha Drummers (Animated swinging arms in rhythm)
+  renderDholGroup(ctx) {
+    const beatPhase = Math.sin(Date.now() * 0.015);
+
+    for (let d = -18; d <= 18; d += 36) {
+      // Drummer Body
+      ctx.fillStyle = '#ff6b1a'; // Saffron kurta
+      ctx.fillRect(d - 7, -42, 14, 28);
+
+      // White dhoti
+      ctx.fillStyle = '#fff7eb';
+      ctx.fillRect(d - 8, -14, 16, 14);
+
+      // Head & Red Turban
+      ctx.fillStyle = '#e0a876';
+      ctx.beginPath();
+      ctx.arc(d, -50, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#d62828';
+      ctx.beginPath();
+      ctx.arc(d, -54, 8, Math.PI, Math.PI * 2);
+      ctx.fill();
+
+      // Dhol Drum slung on shoulder
+      ctx.fillStyle = '#854d0e';
+      ctx.beginPath();
+      ctx.ellipse(d, -28, 14, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Drumsticks beating in rhythm!
+      ctx.strokeStyle = '#ffd152';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(d - 8, -38);
+      ctx.lineTo(d - 2, -28 + beatPhase * 6);
+      ctx.moveTo(d + 8, -38);
+      ctx.lineTo(d + 2, -28 - beatPhase * 6);
+      ctx.stroke();
+    }
+  }
+
+  // 4. Cheering Crowd with Saffron Flags
+  renderCrowdCheer(ctx) {
+    const flagWave = Math.sin(Date.now() * 0.008) * 8;
+
+    for (let c = -24; c <= 24; c += 16) {
+      // Silhouette Body
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.ellipse(c, -18, 7, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head
+      ctx.beginPath();
+      ctx.arc(c, -38, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Raised Cheering Arms
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(c - 4, -28);
+      ctx.lineTo(c - 8, -46);
+      ctx.stroke();
+    }
+
+    // Saffron Festival Flag held high
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(0, -68);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ff6b1a';
+    ctx.beginPath();
+    ctx.moveTo(0, -68);
+    ctx.lineTo(24 + flagWave, -58);
+    ctx.lineTo(0, -48);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // 5. Ornate Pandal Gate Column
+  renderPandalGate(ctx) {
+    // Carved Column
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(-10, -78, 20, 78);
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-14, -84, 28, 8);
+    ctx.fillRect(-14, -8, 28, 8);
+
+    // Green Banana Stem at base with coconuts
+    ctx.fillStyle = '#15803d';
+    ctx.fillRect(-16, -50, 8, 50);
+    ctx.fillStyle = '#ea580c';
+    ctx.beginPath();
+    ctx.arc(-12, -48, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Diya lamp atop pillar
+    ctx.fillStyle = '#ffd152';
+    ctx.beginPath();
+    ctx.arc(0, -90, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 6. Festival Banner
+  renderFestivalBanner(ctx) {
+    // Wooden poles
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-28, -65, 4, 65);
+    ctx.fillRect(24, -65, 4, 65);
+
+    // Banner Fabric
+    ctx.fillStyle = '#d62828';
+    ctx.fillRect(-26, -60, 52, 28);
+
+    // Gold Tassels
+    ctx.fillStyle = '#ffd152';
+    for (let t = -24; t <= 24; t += 8) {
+      ctx.fillRect(t, -32, 4, 6);
+    }
+
+    // Sacred Om symbol
+    ctx.fillStyle = '#ffd152';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ॐ', 0, -46);
+  }
+
+  // 7. Rangoli Artwork on pavement
+  renderRangoli(ctx) {
+    ctx.save();
+    ctx.scale(1, 0.4); // Flattened on ground
+    // Concentric sacred floral rangoli circles
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(0, 0, 24, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ff6b1a';
+    ctx.beginPath();
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffd152';
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#d62828';
+    ctx.beginPath();
+    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 8. Hanging Festive Kandils (Lanterns)
+  renderKandilLights(ctx) {
+    // Pole
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(-4, -75, 4, 75);
+
+    // Hanging string
+    ctx.strokeStyle = '#ffd152';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-4, -75);
+    ctx.lineTo(-18, -55);
+    ctx.stroke();
+
+    // Diamond Star Kandil (Lantern)
+    ctx.fillStyle = '#f43f5e';
+    ctx.beginPath();
+    ctx.moveTo(-18, -62);
+    ctx.lineTo(-10, -50);
+    ctx.lineTo(-18, -38);
+    ctx.lineTo(-26, -50);
+    ctx.closePath();
+    ctx.fill();
+
+    // Golden fringes
+    ctx.fillStyle = '#ffd152';
+    for (let f = -24; f <= -12; f += 4) {
+      ctx.fillRect(f, -38, 2, 8);
+    }
   }
 }
 
 // ----------------------------------------------------------------------------
-// 10. MISSION MANAGER (3 Active Randomized Goals)
+// 10. MISSION & FESTIVAL JOURNEY MANAGER
 // ----------------------------------------------------------------------------
 class MissionManager {
   constructor(game) {
     this.game = game;
     this.activeMissions = [];
     this.pool = [
-      { id: 'MODAK_40', desc: 'Collect 40 Modaks', target: 40, current: 0, reward: 100, type: 'MODAK' },
-      { id: 'DIST_1000', desc: 'Travel 1000 meters', target: 1000, current: 0, reward: 150, type: 'DISTANCE' },
-      { id: 'NEAR_3', desc: 'Perform 3 Near Misses', target: 3, current: 0, reward: 120, type: 'NEAR_MISS' },
-      { id: 'COMBO_3', desc: 'Reach x3 Combo', target: 3, current: 0, reward: 100, type: 'COMBO' },
-      { id: 'POWER_2', desc: 'Collect 2 Power-Ups', target: 2, current: 0, reward: 150, type: 'POWER_UP' },
-      { id: 'COINS_10', desc: 'Collect 10 Festival Coins', target: 10, current: 0, reward: 200, type: 'COINS' }
+      { id: 'MODAK_35', desc: 'Collect 35 Modaks', target: 35, current: 0, reward: 120, type: 'MODAK', icon: '🍬' },
+      { id: 'DIST_800', desc: 'Reach 800 meters', target: 800, current: 0, reward: 150, type: 'DISTANCE', icon: '🏃' },
+      { id: 'NEAR_3', desc: 'Perform 3 Near Misses', target: 3, current: 0, reward: 140, type: 'NEAR_MISS', icon: '✨' },
+      { id: 'COMBO_3', desc: 'Reach x3 Combo', target: 3, current: 0, reward: 100, type: 'COMBO', icon: '🔥' },
+      { id: 'POWER_2', desc: 'Collect 2 Power-Ups', target: 2, current: 0, reward: 150, type: 'POWER_UP', icon: '🛡️' },
+      { id: 'COINS_60', desc: 'Collect 60 Festival Coins', target: 60, current: 0, reward: 180, type: 'COINS', icon: '🪙' }
     ];
   }
 
   generateMissions() {
-    // Pick 3 random missions from the pool
     const shuffled = [...this.pool].sort(() => Math.random() - 0.5);
-    this.activeMissions = shuffled.slice(0, 3).map(m => ({
+    // 4 active missions per run
+    this.activeMissions = shuffled.slice(0, 4).map(m => ({
       ...m,
       current: 0,
       completed: false
     }));
     this.renderStartScreenMissions();
+    this.updateHUD();
   }
 
   track(type, amount = 1) {
@@ -2209,10 +2530,39 @@ class MissionManager {
           this.game.coins += m.reward;
           this.game.updateCoinsHUD();
           this.game.audio.playPowerUp();
-          this.game.showToast(`MISSION COMPLETE! +${m.reward} COINS 🪙`);
+          this.game.showToast(`✓ TASK COMPLETE! +${m.reward} COINS 🪙`);
+
+          // Check if all tasks completed!
+          const completedCount = this.activeMissions.filter(x => x.completed).length;
+          if (completedCount === this.activeMissions.length) {
+            this.game.showBannerAlert("🙏 ALL FESTIVAL TASKS COMPLETE!");
+          }
         }
       }
     });
+    this.updateHUD();
+  }
+
+  updateHUD() {
+    const fillEl = document.getElementById('hudJourneyFill');
+    const pctEl = document.getElementById('hudJourneyPct');
+    const miniTasksEl = document.getElementById('hudMiniTasks');
+
+    const distPct = Math.min(1.0, this.game.distance / CONFIG.DESTINATION_DISTANCE);
+    const completedTasks = this.activeMissions.filter(m => m.completed).length;
+    const taskBonus = (completedTasks / this.activeMissions.length) * 0.2;
+    const totalProgress = Math.min(100, Math.floor((distPct * 0.8 + taskBonus) * 100));
+
+    if (fillEl) fillEl.style.width = totalProgress + '%';
+    if (pctEl) pctEl.textContent = totalProgress + '%';
+
+    if (miniTasksEl) {
+      miniTasksEl.innerHTML = this.activeMissions.map(m => `
+        <span class="task-item ${m.completed ? 'done' : ''}">
+          ${m.icon} ${m.completed ? '✓' : m.current + '/' + m.target}
+        </span>
+      `).join(' • ');
+    }
   }
 
   renderStartScreenMissions() {
@@ -2220,7 +2570,7 @@ class MissionManager {
     if (!list) return;
     list.innerHTML = this.activeMissions.map(m => `
       <li class="${m.completed ? 'done' : ''}">
-        <span>${m.desc}</span>
+        <span>${m.icon} ${m.desc}</span>
         <strong>+${m.reward} 🪙</strong>
       </li>
     `).join('');
@@ -2228,20 +2578,16 @@ class MissionManager {
 }
 
 // ----------------------------------------------------------------------------
-// 11. INPUT MANAGER (Keyboard, Mobile Swipes & Touch Buttons)
+// 11. INPUT MANAGER (Modern Temple Run-Style Swipe Controls & Desktop Keys)
 // ----------------------------------------------------------------------------
 class InputManager {
   constructor(game) {
     this.game = game;
-    this.touchStartX = 0;
-    this.touchStartY = 0;
-    this.touchStartTime = 0;
   }
 
   bindEvents() {
     // Desktop Keyboard
     window.addEventListener('keydown', (e) => {
-      // Audio auto-unlock on first user interaction
       if (!this.game.audio.unlocked) {
         this.game.audio.init();
       }
@@ -2280,58 +2626,62 @@ class InputManager {
       }
     });
 
-    // Mobile Swipe Gestures on Game Container
+    // Mobile Temple Run-Style Swipe Controls (Zero delay, instant response)
     const container = document.getElementById('game-container');
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let swipeTriggered = false;
+    const SWIPE_THRESHOLD = 26; // px threshold for snappy response
+
     container.addEventListener('touchstart', (e) => {
       if (!this.game.audio.unlocked) this.game.audio.init();
       const t = e.touches[0];
-      this.touchStartX = t.clientX;
-      this.touchStartY = t.clientY;
-      this.touchStartTime = Date.now();
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      swipeTriggered = false;
     }, { passive: true });
 
-    container.addEventListener('touchend', (e) => {
-      if (this.game.state !== 'PLAYING') return;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - this.touchStartX;
-      const dy = t.clientY - this.touchStartY;
-      const dt = Date.now() - this.touchStartTime;
-
-      if (dt > 450) return; // Ignore long drags
-
+    container.addEventListener('touchmove', (e) => {
+      if (swipeTriggered || this.game.state !== 'PLAYING') return;
+      const t = e.touches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
       const absX = Math.abs(dx);
       const absY = Math.abs(dy);
 
-      if (Math.max(absX, absY) > 30) {
+      if (Math.max(absX, absY) >= SWIPE_THRESHOLD) {
+        swipeTriggered = true;
         if (absX > absY) {
-          // Horizontal Swipe
           if (dx > 0) this.game.player.moveRight();
           else this.game.player.moveLeft();
         } else {
-          // Vertical Swipe
           if (dy < 0) this.game.player.jump();
           else this.game.player.slide();
         }
       }
     }, { passive: true });
 
-    // Touch Navigation Buttons
-    const bindBtn = (id, fn) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const handler = (e) => {
-        e.preventDefault();
-        if (!this.game.audio.unlocked) this.game.audio.init();
-        if (this.game.state === 'PLAYING') fn();
-      };
-      el.addEventListener('touchstart', handler, { passive: false });
-      el.addEventListener('click', handler);
-    };
+    container.addEventListener('touchend', (e) => {
+      // Catch quick release flicks if not already fired in move
+      if (!swipeTriggered && this.game.state === 'PLAYING') {
+        const t = e.changedTouches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
 
-    bindBtn('btnTouchLeft', () => this.game.player.moveLeft());
-    bindBtn('btnTouchRight', () => this.game.player.moveRight());
-    bindBtn('btnTouchJump', () => this.game.player.jump());
-    bindBtn('btnTouchSlide', () => this.game.player.slide());
+        if (Math.max(absX, absY) >= 20) {
+          if (absX > absY) {
+            if (dx > 0) this.game.player.moveRight();
+            else this.game.player.moveLeft();
+          } else {
+            if (dy < 0) this.game.player.jump();
+            else this.game.player.slide();
+          }
+        }
+      }
+      swipeTriggered = false;
+    }, { passive: true });
 
     // Screen Buttons
     document.getElementById('btnStartGame').addEventListener('click', () => {
@@ -2405,12 +2755,10 @@ class InputManager {
       this.game.showMenu();
     });
 
-    // Share Score Button
     document.getElementById('btnShareScore').addEventListener('click', () => {
       this.game.shareScore();
     });
 
-    // Cosmetic Trail Selector
     const trailSel = document.getElementById('trailSelector');
     if (trailSel) {
       trailSel.addEventListener('change', (e) => {
@@ -2418,7 +2766,6 @@ class InputManager {
       });
     }
 
-    // Window Resize
     window.addEventListener('resize', () => {
       this.game.onResize();
     });
@@ -2436,7 +2783,7 @@ class Game {
     // Engine Components
     this.audio = new AudioManager();
     this.perspective = new PerspectiveEngine(this.canvas);
-    this.particles = new ParticleSystem(350);
+    this.particles = new ParticleSystem(400);
     this.player = new Player(this);
     this.obstacles = new ObstacleManager(this);
     this.collectibles = new CollectibleManager(this);
@@ -2445,7 +2792,7 @@ class Game {
     this.missions = new MissionManager(this);
     this.input = new InputManager(this);
 
-    // State Machine: MENU, PLAYING, PAUSED, GAME_OVER, FINALE, RESULTS
+    // State Machine: MENU, PLAYING, PAUSED, DESTINATION_CELEBRATION, GAME_OVER, FINALE
     this.state = 'MENU';
 
     // Game Stats
@@ -2464,8 +2811,20 @@ class Game {
     this.bestCombo = 1;
     this.nearMissCount = 0;
 
+    // Festival Landmarks
+    this.landmarks = [
+      { dist: 0, name: 'FESTIVAL ENTRANCE', shown: false },
+      { dist: 500, name: 'DHOL CHOWK', shown: false },
+      { dist: 1100, name: 'FLOWER BAZAAR', shown: false },
+      { dist: 1700, name: 'GRAND PANDAL STREET', shown: false },
+      { dist: 2300, name: 'GANESHA DESTINATION', shown: false }
+    ];
+
     // Blessing event trigger
     this.lastBlessingDist = 0;
+
+    // Celebration Timer
+    this.celebrationTimer = 0;
 
     // Screen Shake FX
     this.shakeTimer = 0;
@@ -2484,7 +2843,6 @@ class Game {
     this.missions.generateMissions();
     this.showMenu();
 
-    // Start single RAF loop
     this.rafId = requestAnimationFrame((ts) => this.gameLoop(ts));
   }
 
@@ -2504,7 +2862,6 @@ class Game {
     this.perspective.resize(width, height);
   }
 
-  // State Transitions
   showMenu() {
     this.state = 'MENU';
     this.audio.stopDholRhythm();
@@ -2527,6 +2884,10 @@ class Game {
     this.bestCombo = 1;
     this.nearMissCount = 0;
     this.lastBlessingDist = 0;
+    this.celebrationTimer = 0;
+
+    // Reset landmarks
+    this.landmarks.forEach(lm => lm.shown = false);
 
     // Reset systems
     this.player.reset();
@@ -2542,6 +2903,13 @@ class Game {
     this.hideAllScreens();
 
     this.audio.startDholRhythm();
+
+    // First run swipe hint auto-fadeout
+    const hint = document.getElementById('swipeTutorialHint');
+    if (hint) {
+      hint.classList.add('show');
+      setTimeout(() => hint.classList.remove('show'), 3800);
+    }
   }
 
   togglePause() {
@@ -2566,6 +2934,7 @@ class Game {
     this.audio.startDholRhythm();
   }
 
+  // ENDING A: FAILED RUN (Lives hit 0)
   gameOver() {
     this.state = 'GAME_OVER';
     this.audio.stopDholRhythm();
@@ -2582,13 +2951,38 @@ class Game {
     document.getElementById('goNearMisses').textContent = this.nearMissCount;
     document.getElementById('goCoins').textContent = this.coins;
 
+    const completed = this.missions.activeMissions.filter(m => m.completed).length;
+    const summaryEl = document.getElementById('goTasksSummary');
+    if (summaryEl) {
+      summaryEl.textContent = `🚩 Festival Tasks Completed: ${completed} / ${this.missions.activeMissions.length}`;
+    }
+
     document.getElementById('screenGameOver').classList.add('active');
   }
 
-  triggerVisarjanFinale() {
+  // ENDING B: REACHED GRAND GANESHA DESTINATION (Celebration Sequence)
+  triggerGaneshaDestination() {
+    if (this.state === 'DESTINATION_CELEBRATION' || this.state === 'FINALE') return;
+    this.state = 'DESTINATION_CELEBRATION';
+    this.celebrationTimer = 4.0; // 4 seconds of grand celebration before results
+
+    this.audio.playFinale();
+    this.showBannerAlert("GANAPATI BAPPA MORYA! 🙏");
+
+    // Burst celebration fireworks & golden flower shower
+    for (let i = 0; i < 60; i++) {
+      this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.4), 1, {
+        colors: ['#ffd152', '#ff6b1a', '#fff', '#f43f5e', '#38bdf8'],
+        minSpeed: 2,
+        maxSpeed: 8,
+        shape: 'spark'
+      });
+    }
+  }
+
+  showFinaleScreen() {
     this.state = 'FINALE';
     this.audio.stopDholRhythm();
-    this.audio.playFinale();
 
     if (this.score > this.highScore) {
       this.highScore = this.score;
@@ -2603,13 +2997,26 @@ class Game {
 
     const mContainer = document.getElementById('finMissions');
     const compCount = this.missions.activeMissions.filter(m => m.completed).length;
-    mContainer.textContent = `🚩 Missions Completed: ${compCount} / 3`;
+    mContainer.textContent = `🚩 Festival Journey Completed: ${compCount} / ${this.missions.activeMissions.length} Tasks • Reached Lord Ganesha! 🙏`;
 
     document.getElementById('screenFinale').classList.add('active');
   }
 
   hideAllScreens() {
     document.querySelectorAll('.screen-overlay').forEach(el => el.classList.remove('active'));
+  }
+
+  showLandmark(name) {
+    this.audio.playLandmarkChime();
+    const banner = document.getElementById('landmarkBanner');
+    const textEl = document.getElementById('landmarkText');
+    if (!banner || !textEl) return;
+
+    textEl.textContent = name;
+    banner.classList.add('active');
+    setTimeout(() => {
+      banner.classList.remove('active');
+    }, 2500);
   }
 
   toggleSound() {
@@ -2621,7 +3028,7 @@ class Game {
   }
 
   shareScore() {
-    const text = `🪔 I scored ${Math.floor(this.score)} points and ran ${Math.floor(this.distance)}m in Ganapathi Rush 2.0! Ganapati Bappa Morya! 🙏`;
+    const text = `🪔 I scored ${Math.floor(this.score)} points and reached Lord Ganesha in Ganapathi Rush 2.0! Ganapati Bappa Morya! 🙏`;
     if (navigator.share) {
       navigator.share({
         title: 'Ganapathi Rush 2.0',
@@ -2644,18 +3051,15 @@ class Game {
       this.modaks++;
       this.missions.track('MODAK', 1);
 
-      // Score calculation with active multipliers
       const basePoints = 10;
       const scoreMul = this.powerUps.isDoubleScore ? 2 : 1;
       const points = basePoints * this.comboMultiplier * scoreMul;
       this.score += points;
 
-      // Combo Increment
       this.comboCount++;
-      this.comboTimer = 3.6; // Refresh combo timer
+      this.comboTimer = 3.6;
       this.evaluateComboTier();
 
-      // Collect Sparkles
       const proj = this.perspective.project(item.laneX, item.worldY, item.z);
       this.particles.spawn(proj.x, proj.y, 8, {
         colors: ['#ffd152', '#ff8426', '#fff'],
@@ -2709,14 +3113,13 @@ class Game {
     this.nearMissCount++;
     this.audio.playNearMiss();
     this.score += 150 * (this.powerUps.isDoubleScore ? 2 : 1);
-    this.comboCount += 2; // Bonus combo boost
+    this.comboCount += 2;
     this.comboTimer = 3.6;
     this.evaluateComboTier();
     this.missions.track('NEAR_MISS', 1);
 
     this.showBannerAlert('NEAR MISS! +150 ✨');
 
-    // Whoosh particle arc
     const proj = this.perspective.project(this.player.currentLaneX, 10, 0);
     this.particles.spawn(proj.x, proj.y, 14, {
       colors: ['#ffd152', '#38bdf8', '#ffffff'],
@@ -2732,13 +3135,11 @@ class Game {
     this.audio.playBlessing();
     this.showBannerAlert("BAPPA'S BLESSING! 🙏✨");
 
-    // Grants temporary double score + shield
     this.powerUps.isDoubleScore = true;
     this.powerUps.doubleScoreTimer = 14.0;
     this.powerUps.hasShield = true;
     this.powerUps.updateHUD();
 
-    // Divine golden particle shower
     for (let i = 0; i < 40; i++) {
       this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.5), 1, {
         colors: ['#ffd152', '#fff7eb', '#ff6b1a'],
@@ -2750,27 +3151,23 @@ class Game {
   }
 
   checkCollisions() {
-    if (this.player.invulnerableTimer > 0) return;
+    if (this.player.invulnerableTimer > 0 || this.state === 'DESTINATION_CELEBRATION') return;
 
     for (let i = 0; i < this.obstacles.obstacles.length; i++) {
       const obs = this.obstacles.obstacles[i];
       if (obs.hit) continue;
 
-      // Depth match threshold (near player plane Z ~ 0)
       if (Math.abs(obs.z) < CONFIG.HIT_DEPTH_THRESHOLD) {
         const laneDiff = Math.abs(this.player.currentLaneX - (obs.lane - 1));
 
         if (laneDiff < CONFIG.PLAYER_HIT_W) {
-          // Check Vertical Clearance based on obstacle type & player action
           let isHit = false;
 
           if (obs.type === 'TORAN') {
-            // Overhead Toran: Safe if sliding, hit if standing or jumping!
             if (!this.player.isSliding) {
               isHit = true;
             }
           } else {
-            // Ground obstacles: Safe if jumped over with sufficient clearance
             if (this.player.jumpY < 32) {
               isHit = true;
             }
@@ -2787,7 +3184,6 @@ class Game {
   }
 
   handlePlayerHit(obs) {
-    // If Bappa Boost active: plow through obstacle without damage!
     if (this.powerUps.isBoostActive) {
       this.audio.playHit();
       this.triggerScreenShake(8, 0.2);
@@ -2800,7 +3196,6 @@ class Game {
       return;
     }
 
-    // If Divine Shield is active: absorb collision!
     if (this.powerUps.hasShield) {
       this.powerUps.hasShield = false;
       this.powerUps.updateHUD();
@@ -2819,19 +3214,16 @@ class Game {
       return;
     }
 
-    // Take Damage: Lose Life
     this.lives--;
     this.updateLivesHUD();
     this.audio.playHit();
     this.triggerScreenShake(12, 0.35);
     this.player.invulnerableTimer = CONFIG.INVULNERABLE_TIME;
 
-    // Reset combo chain on hit
     this.comboCount = 0;
     this.comboMultiplier = 1;
     this.comboTimer = 0;
 
-    // Hit particle explosion
     const proj = this.perspective.project(this.player.currentLaneX, 20, 0);
     this.particles.spawn(proj.x, proj.y, 25, {
       colors: ['#d62828', '#ff6b1a', '#ffd152'],
@@ -2866,7 +3258,7 @@ class Game {
     if (!alert) return;
     alert.textContent = text;
     alert.classList.add('show');
-    setTimeout(() => alert.classList.remove('show'), 950);
+    setTimeout(() => alert.classList.remove('show'), 1200);
   }
 
   updateHUD() {
@@ -2875,7 +3267,6 @@ class Game {
     document.getElementById('hudModaks').textContent = this.modaks;
     document.getElementById('hudCoins').textContent = this.coins;
 
-    // Combo text & timer bar
     const comboText = document.getElementById('hudComboText');
     const comboFill = document.getElementById('hudComboFill');
     if (comboText && comboFill) {
@@ -2883,6 +3274,8 @@ class Game {
       const fillPct = Math.max(0, Math.min(100, (this.comboTimer / 3.6) * 100));
       comboFill.style.width = fillPct + '%';
     }
+
+    this.missions.updateHUD();
   }
 
   updateLivesHUD() {
@@ -2909,12 +3302,13 @@ class Game {
   // --------------------------------------------------------------------------
   gameLoop(timestamp) {
     if (!this.lastTimestamp) this.lastTimestamp = timestamp;
-    // Cap delta time to 0.1s to prevent huge jumps when switching tabs
     const dt = Math.min((timestamp - this.lastTimestamp) / 1000, 0.1);
     this.lastTimestamp = timestamp;
 
     if (this.state === 'PLAYING') {
       this.update(dt);
+    } else if (this.state === 'DESTINATION_CELEBRATION') {
+      this.updateCelebration(dt);
     }
 
     this.render();
@@ -2935,6 +3329,15 @@ class Game {
     this.score += distanceDelta * 1.2 * (this.powerUps.isDoubleScore ? 2 : 1);
     this.missions.track('DISTANCE', Math.floor(distanceDelta));
 
+    // Check Landmarks
+    for (let lm of this.landmarks) {
+      if (!lm.shown && this.distance >= lm.dist) {
+        lm.shown = true;
+        this.showLandmark(lm.name);
+        break;
+      }
+    }
+
     // Combo Decay
     if (this.comboTimer > 0) {
       this.comboTimer -= dt;
@@ -2951,13 +3354,13 @@ class Game {
       this.triggerBlessing();
     }
 
-    // Check Grand Visarjan Finale Milestone (~2600m)
-    if (this.distance >= CONFIG.VISARJAN_DISTANCE) {
-      this.triggerVisarjanFinale();
+    // Check Destination Reach Milestone (~2400m)
+    if (this.distance >= CONFIG.DESTINATION_DISTANCE) {
+      this.triggerGaneshaDestination();
       return;
     }
 
-    // Update Engine Subsystems
+    // Update Subsystems
     this.player.update(dt);
     this.obstacles.update(dt);
     this.collectibles.update(dt);
@@ -2979,10 +3382,39 @@ class Game {
     this.updateHUD();
   }
 
+  // 3-5s Celebration sequence when reaching Lord Ganesha
+  updateCelebration(dt) {
+    this.celebrationTimer -= dt;
+
+    // Gently slow player down as they approach Lord Ganesha's sanctum
+    this.speed = Math.max(80, this.speed - 90 * dt);
+    this.distance += this.speed * dt * 0.1;
+    this.score += 150 * dt; // Victory bonus score!
+
+    this.player.update(dt);
+    this.environment.update(dt);
+    this.particles.update(dt);
+
+    // Spawn celebratory fireworks & confetti constantly
+    if (Math.random() < 0.35) {
+      this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.4), 4, {
+        colors: ['#ffd152', '#ff6b1a', '#ff4d6d', '#38bdf8', '#fff'],
+        minSpeed: 3,
+        maxSpeed: 8,
+        shape: 'spark'
+      });
+    }
+
+    this.updateHUD();
+
+    if (this.celebrationTimer <= 0) {
+      this.showFinaleScreen();
+    }
+  }
+
   render() {
     this.ctx.save();
 
-    // Apply Screen Shake
     if (this.shakeIntensity > 0) {
       const shakeX = (Math.random() - 0.5) * this.shakeIntensity * 2;
       const shakeY = (Math.random() - 0.5) * this.shakeIntensity * 2;
@@ -2991,10 +3423,10 @@ class Game {
 
     this.ctx.clearRect(0, 0, this.width, this.height);
 
-    // 1. Sky, Stars & Silhouettes
+    // 1. Sky, Stars & Horizon Ganesha Destination
     this.environment.renderSky(this.ctx, this.width, this.height);
 
-    // 2. Road, Curbs & Festive Lights
+    // 2. Road, Curbs & Roadside Scenery
     this.environment.renderRoad(this.ctx);
 
     // 3. Obstacles (sorted back-to-front)
@@ -3005,7 +3437,7 @@ class Game {
     this.powerUps.render(this.ctx);
 
     // 5. Player Character & Auras
-    if (this.state === 'PLAYING' || this.state === 'PAUSED') {
+    if (this.state === 'PLAYING' || this.state === 'PAUSED' || this.state === 'DESTINATION_CELEBRATION') {
       this.player.render(this.ctx);
     }
 

@@ -12,7 +12,7 @@
     <!-- Main Rendering Canvas -->
     <canvas id="gameCanvas"></canvas>
 
-    <!-- In-Game HUD -->
+    <!-- In-Game HUD (Unobstructed road view) -->
     <div id="hud" class="overlay-layer">
       <!-- Top Row: Lives, Score, Modaks & Coins -->
       <div class="hud-top-bar">
@@ -44,13 +44,27 @@
         </div>
       </div>
 
-      <!-- Second Row: Combo Gauge, Active Power-Ups & Audio/Pause Buttons -->
+      <!-- Second Row: Combo Gauge, Journey Progress, Active Power-Ups & Controls -->
       <div class="hud-sub-bar">
         <!-- Combo Indicator -->
         <div class="combo-badge" id="hudComboBadge">
           <div class="combo-text" id="hudComboText">COMBO x1</div>
           <div class="combo-timer-bar">
             <div class="combo-timer-fill" id="hudComboFill"></div>
+          </div>
+        </div>
+
+        <!-- Festival Journey & Task Progress (Compact) -->
+        <div class="hud-journey-container" id="hudJourney">
+          <div class="journey-header">
+            <span class="journey-title">DESTINATION: GANESHA PANDAL</span>
+            <span class="journey-pct" id="hudJourneyPct">0%</span>
+          </div>
+          <div class="journey-progress-bar">
+            <div class="journey-fill" id="hudJourneyFill"></div>
+          </div>
+          <div class="mini-task-tracker" id="hudMiniTasks">
+            <!-- Populated dynamically with active task progress -->
           </div>
         </div>
 
@@ -66,22 +80,21 @@
         </div>
       </div>
 
+      <!-- Landmark Notification Banner (e.g. DHOL CHOWK) -->
+      <div id="landmarkBanner" class="landmark-banner" aria-live="polite">
+        <span class="landmark-icon">📍</span>
+        <span id="landmarkText" class="landmark-text">FESTIVAL ENTRANCE</span>
+      </div>
+
       <!-- Toast Container for Missions & Moments -->
       <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
       <!-- Near Miss & Special Moment Floaters -->
       <div id="bannerAlert" class="banner-alert"></div>
-    </div>
 
-    <!-- Mobile Touch Controls Overlay -->
-    <div id="touchControls" class="touch-controls-layer">
-      <div class="touch-lane-controls">
-        <button id="btnTouchLeft" class="touch-btn touch-btn-nav" aria-label="Move Left">◀</button>
-        <button id="btnTouchRight" class="touch-btn touch-btn-nav" aria-label="Move Right">▶</button>
-      </div>
-      <div class="touch-action-controls">
-        <button id="btnTouchJump" class="touch-btn touch-btn-action" aria-label="Jump">▲ JUMP</button>
-        <button id="btnTouchSlide" class="touch-btn touch-btn-action" aria-label="Slide">▼ SLIDE</button>
+      <!-- Swipe Tutorial Hint (Fades out automatically during first run) -->
+      <div id="swipeTutorialHint" class="swipe-hint">
+        <span>SWIPE <strong>← →</strong> TO MOVE • <strong>↑</strong> TO JUMP • <strong>↓</strong> TO SLIDE</span>
       </div>
     </div>
 
@@ -96,7 +109,7 @@
           <span class="diya-decor">🪔</span>
         </div>
         <h1 class="game-title">GANAPATHI RUSH <span class="version-tag">2.0</span></h1>
-        <p class="game-tagline">RUN • COLLECT • CELEBRATE</p>
+        <p class="game-tagline">RUN • COLLECT • CELEBRATE • REACH BAPPA</p>
 
         <div class="high-score-banner">
           <span>🏆 BEST SCORE:</span>
@@ -105,7 +118,7 @@
 
         <div class="menu-actions">
           <button id="btnStartGame" class="btn-festive btn-primary">
-            <span class="btn-icon">▶</span> START RUN
+            <span class="btn-icon">▶</span> START FESTIVAL RUN
           </button>
           <button id="btnHowToPlay" class="btn-festive btn-secondary">
             <span class="btn-icon">📖</span> HOW TO PLAY
@@ -116,7 +129,7 @@
         </div>
 
         <div class="active-missions-preview">
-          <div class="preview-title">🚩 TODAY'S FESTIVAL MISSIONS</div>
+          <div class="preview-title">🚩 FESTIVAL JOURNEY TASKS</div>
           <ul id="startMissionsList" class="missions-list">
             <!-- Populated dynamically -->
           </ul>
@@ -134,7 +147,7 @@
 
         <div class="controls-quick-hint">
           <span>Desktop: <strong>A / D / ← / →</strong> (Lane) • <strong>W / ↑ / Space</strong> (Jump) • <strong>S / ↓</strong> (Slide)</span>
-          <span>Mobile: <strong>Swipe</strong> or <strong>Touch Buttons</strong></span>
+          <span>Mobile: <strong>Swipe Left/Right</strong> • <strong>Swipe Up</strong> (Jump) • <strong>Swipe Down</strong> (Slide)</span>
         </div>
       </div>
     </div>
@@ -142,27 +155,27 @@
     <!-- 2. How To Play Modal -->
     <div id="modalHowToPlay" class="screen-overlay modal-overlay">
       <div class="screen-card modal-card">
-        <h2>HOW TO CELEBRATE & RUN</h2>
+        <h2>JOURNEY TO REACH LORD GANESHA</h2>
         <div class="instructions-grid">
           <div class="instruction-box">
             <div class="instruction-icon">🏃‍♂️</div>
-            <h3>3-Lane Movement</h3>
-            <p>Switch lanes smoothly to dodge obstacles and gather trails of glowing treats.</p>
+            <h3>Swipe / Arrow Movement</h3>
+            <p>Swipe or press A/D to switch lanes through the vibrant festival street and avoid stalls & crowds.</p>
           </div>
           <div class="instruction-box">
             <div class="instruction-icon">🦘</div>
             <h3>Jump & Slide</h3>
-            <p>Jump over barricades and drums. Slide under hanging floral torans and overhead arches.</p>
+            <p>Swipe Up / Space to jump over barricades and dhol drums. Swipe Down to slide under hanging torans.</p>
           </div>
           <div class="instruction-box">
             <div class="instruction-icon">🍬</div>
             <h3>Modaks & Combos</h3>
-            <p>Collect Modaks to multiply your score up to 5x. Don't break your combo chain!</p>
+            <p>Collect Modaks to multiply your score up to 5x. Complete your festival tasks along the route.</p>
           </div>
           <div class="instruction-box">
-            <div class="instruction-icon">🛡️</div>
-            <h3>Divine Power-Ups</h3>
-            <p>Grab Shields, Magnets, Bappa Boosts, 2x Multipliers, and Slow-Mo for high scores.</p>
+            <div class="instruction-icon">🛕</div>
+            <h3>Reach the Grand Pandal</h3>
+            <p>Follow the illuminated street to reach the giant golden Ganesha idol for the ultimate celebration!</p>
           </div>
         </div>
         <button id="btnCloseModal" class="btn-festive btn-primary">GOT IT! LET'S RUN</button>
@@ -183,7 +196,7 @@
       </div>
     </div>
 
-    <!-- 4. Game Over Screen -->
+    <!-- 4. Game Over Screen (Ending A: Failed run) -->
     <div id="screenGameOver" class="screen-overlay">
       <div class="screen-card gameover-card">
         <div class="card-diya-header">
@@ -220,6 +233,10 @@
           </div>
         </div>
 
+        <div class="missions-completed-summary" id="goTasksSummary">
+          <!-- Populated dynamically -->
+        </div>
+
         <div class="menu-actions">
           <button id="btnRunAgain" class="btn-festive btn-primary">🔄 RUN AGAIN</button>
           <button id="btnMenuFromGameOver" class="btn-festive btn-secondary">🏠 MAIN MENU</button>
@@ -227,14 +244,14 @@
       </div>
     </div>
 
-    <!-- 5. Finale & Results Screen -->
+    <!-- 5. Finale & Results Screen (Ending B: Reached Grand Ganesha) -->
     <div id="screenFinale" class="screen-overlay">
       <div class="screen-card finale-card">
         <div class="finale-header">
-          <div class="diya-decor">🪔 🌸 🪔</div>
+          <div class="diya-decor">🪔 🌺 🪔</div>
           <h2 class="finale-title">FESTIVAL COMPLETE!</h2>
           <div class="sacred-chants">GANAPATI BAPPA MORYA! 🙏</div>
-          <p class="finale-tagline">You reached the Grand Visarjan Ghat with devotion and glory!</p>
+          <p class="finale-tagline">You completed your journey and reached the Grand Ganesha Pandal with glory!</p>
         </div>
 
         <div class="stats-summary-grid finale-stats">
