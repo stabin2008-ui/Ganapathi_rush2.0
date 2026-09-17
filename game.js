@@ -1171,164 +1171,272 @@ class ObstacleManager {
   }
 
   renderBarricade(ctx) {
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.beginPath();
-    ctx.ellipse(0, 0, 36, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 38, 10, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(-34, -48, 68, 12);
-    ctx.fillRect(-34, -28, 68, 10);
+    // Wooden upright posts with brass caps
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-30, -52, 9, 52);
+    ctx.fillRect(21, -52, 9, 52);
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-32, -56, 13, 5);
+    ctx.fillRect(19, -56, 13, 5);
 
-    ctx.fillStyle = '#ffba08';
-    for (let g = -30; g <= 30; g += 10) {
+    // Crossbars with yellow/black hazard chevrons
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(-36, -48, 72, 14);
+    ctx.fillRect(-36, -26, 72, 12);
+
+    // Diagonal hazard stripes on upper bar
+    ctx.fillStyle = '#ffd152';
+    for (let c = -32; c <= 28; c += 16) {
       ctx.beginPath();
-      ctx.arc(g, -48, 5, 0, Math.PI * 2);
+      ctx.moveTo(c, -48);
+      ctx.lineTo(c + 8, -48);
+      ctx.lineTo(c, -34);
+      ctx.lineTo(c - 8, -34);
+      ctx.closePath();
       ctx.fill();
     }
 
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(-28, -48, 8, 48);
-    ctx.fillRect(20, -48, 8, 48);
-
-    ctx.fillStyle = '#f59e0b';
-    ctx.beginPath();
-    ctx.moveTo(-18, -48); ctx.lineTo(-10, -48); ctx.lineTo(-20, -36); ctx.lineTo(-28, -36); ctx.fill();
-    ctx.moveTo(6, -48); ctx.lineTo(14, -48); ctx.lineTo(4, -36); ctx.lineTo(-4, -36); ctx.fill();
+    // Sacred Marigold Garland draped across top bar
+    for (let g = -32; g <= 32; g += 8) {
+      ctx.fillStyle = (g % 16 === 0) ? '#ffd152' : '#ff8426';
+      ctx.beginPath();
+      ctx.arc(g, -50 + Math.sin(g * 0.15) * 3, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   renderDhol(ctx) {
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    // Contact Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.beginPath();
-    ctx.ellipse(0, 0, 34, 12, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 36, 12, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // Wooden Stand
     ctx.strokeStyle = '#5c2c16';
     ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(-24, 0); ctx.lineTo(-14, -24); ctx.lineTo(-4, 0);
-    ctx.moveTo(4, 0); ctx.lineTo(14, -24); ctx.lineTo(24, 0);
+    ctx.moveTo(-24, 0); ctx.lineTo(-14, -22); ctx.lineTo(-4, 0);
+    ctx.moveTo(4, 0); ctx.lineTo(14, -22); ctx.lineTo(24, 0);
     ctx.stroke();
 
-    ctx.fillStyle = '#854d0e';
+    // Barrel Body (Deep Teak Wood with Saffron Sheen)
+    ctx.fillStyle = '#78350f';
     ctx.beginPath();
-    ctx.ellipse(0, -34, 30, 18, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -34, 32, 19, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#e2e8f0';
+    // Left and Right Leather Drumheads with Brass Rims
+    ctx.fillStyle = '#f8fafc';
     ctx.beginPath();
-    ctx.ellipse(-26, -34, 6, 16, 0, 0, Math.PI * 2);
-    ctx.ellipse(26, -34, 6, 16, 0, 0, Math.PI * 2);
+    ctx.ellipse(-28, -34, 6.5, 17, 0, 0, Math.PI * 2);
+    ctx.ellipse(28, -34, 6.5, 17, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // Brass Tension Rings
+    ctx.strokeStyle = '#ffd152';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(-28, -34, 6.5, 17, 0, 0, Math.PI * 2);
+    ctx.ellipse(28, -34, 6.5, 17, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Zig-Zag Leather Tension Ropes
     ctx.strokeStyle = '#ffd152';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(-24, -46); ctx.lineTo(24, -22);
-    ctx.moveTo(-24, -22); ctx.lineTo(24, -46);
+    ctx.moveTo(-26, -46); ctx.lineTo(26, -22);
+    ctx.moveTo(-26, -22); ctx.lineTo(26, -46);
+    ctx.moveTo(-16, -48); ctx.lineTo(16, -20);
+    ctx.moveTo(-16, -20); ctx.lineTo(16, -48);
     ctx.stroke();
 
-    ctx.strokeStyle = '#ff6b1a';
-    ctx.lineWidth = 3;
+    // Ceremonial Red & Gold Kolhapuri Dupatta draped over Dhol
+    ctx.fillStyle = '#dc2626';
     ctx.beginPath();
-    ctx.moveTo(-10, -54); ctx.lineTo(10, -38);
-    ctx.stroke();
+    ctx.moveTo(-12, -49);
+    ctx.quadraticCurveTo(0, -56, 12, -49);
+    ctx.lineTo(8, -32);
+    ctx.quadraticCurveTo(0, -36, -8, -32);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-6, -34, 12, 3);
   }
 
   renderToran(ctx) {
+    // Carved Golden Bamboo Posts
     ctx.fillStyle = '#ca8a04';
-    ctx.fillRect(-38, -125, 8, 125);
-    ctx.fillRect(30, -125, 8, 125);
+    ctx.fillRect(-42, -130, 9, 130);
+    ctx.fillRect(33, -130, 9, 130);
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-44, -134, 13, 6);
+    ctx.fillRect(31, -134, 13, 6);
 
-    ctx.fillStyle = '#d62828';
-    ctx.fillRect(-42, -125, 84, 14);
+    // Decorative Lintel Bar
+    ctx.fillStyle = '#b91c1c';
+    ctx.fillRect(-48, -130, 96, 16);
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-48, -132, 96, 3);
+    ctx.fillRect(-48, -116, 96, 3);
 
+    // Ornate Center Sun Medallion
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
-    ctx.arc(0, -125, 14, Math.PI, Math.PI * 2);
+    ctx.arc(0, -130, 16, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(0, -130, 8, Math.PI, Math.PI * 2);
     ctx.fill();
 
-    const hangingY = -110;
-    ctx.fillStyle = '#ffba08';
-    for (let m = -34; m <= 34; m += 12) {
+    // Sagging Marigold Garlands with Mango Leaves (Curved Toran)
+    const hangingY = -112;
+    for (let m = -40; m <= 40; m += 10) {
+      const sag = Math.sin((m + 40) / 80 * Math.PI) * 12;
+      ctx.fillStyle = (m % 20 === 0) ? '#ffd152' : '#ff8426';
       ctx.beginPath();
-      ctx.arc(m, hangingY + Math.sin(m * 0.2) * 6, 6, 0, Math.PI * 2);
+      ctx.arc(m, hangingY + sag, 5.5, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.fillStyle = '#16a34a';
-      ctx.beginPath();
-      ctx.moveTo(m, hangingY + 6);
-      ctx.lineTo(m + 4, hangingY + 22);
-      ctx.lineTo(m - 4, hangingY + 22);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#ffba08';
+      // Mango Leaves hanging between flowers
+      if (m % 20 === 0) {
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.moveTo(m, hangingY + sag + 5);
+        ctx.lineTo(m + 4, hangingY + sag + 20);
+        ctx.lineTo(m - 4, hangingY + sag + 20);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
 
-    ctx.fillStyle = 'rgba(214, 40, 40, 0.9)';
-    ctx.fillRect(-22, -88, 44, 14);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 9px sans-serif';
+    // High-Contrast Clear Slide Warning Banner
+    ctx.fillStyle = 'rgba(220, 38, 38, 0.95)';
+    ctx.fillRect(-26, -92, 52, 16);
+    ctx.strokeStyle = '#ffd152';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-26, -92, 52, 16);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('▼ SLIDE', 0, -77);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('▼ SLIDE', 0, -84);
   }
 
   renderCrates(ctx) {
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.beginPath();
-    ctx.ellipse(0, 0, 32, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 36, 12, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // Two stacked wooden puja supply crates
     ctx.fillStyle = '#78350f';
-    ctx.fillRect(-28, -32, 28, 32);
-    ctx.fillRect(0, -24, 28, 24);
+    ctx.fillRect(-30, -36, 32, 36);
+    ctx.fillRect(0, -26, 30, 26);
 
+    // Brass Corner Reinforcements
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-30, -36, 6, 6);
+    ctx.fillRect(-4, -36, 6, 6);
+    ctx.fillRect(0, -26, 6, 6);
+    ctx.fillRect(24, -26, 6, 6);
+
+    // Saffron Silk Drapes on tops
     ctx.fillStyle = '#ea580c';
     ctx.beginPath();
-    ctx.arc(-14, -36, 6, 0, Math.PI * 2);
-    ctx.arc(-6, -34, 5, 0, Math.PI * 2);
-    ctx.arc(14, -28, 6, 0, Math.PI * 2);
+    ctx.arc(-14, -40, 8, 0, Math.PI * 2);
+    ctx.arc(-6, -38, 7, 0, Math.PI * 2);
+    ctx.arc(15, -30, 8, 0, Math.PI * 2);
     ctx.fill();
 
+    // Sacred Modak & Coconut offerings on crates
+    ctx.fillStyle = '#fff7eb';
+    ctx.beginPath();
+    ctx.arc(-14, -42, 4.5, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
-    ctx.arc(-18, -34, 4, 0, Math.PI * 2);
-    ctx.arc(8, -26, 4, 0, Math.PI * 2);
+    ctx.arc(15, -32, 5, 0, Math.PI * 2);
     ctx.fill();
   }
 
   renderCart(ctx) {
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.beginPath();
-    ctx.ellipse(0, 0, 38, 12, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 42, 13, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#451a03';
-    ctx.beginPath();
-    ctx.arc(-26, -12, 12, 0, Math.PI * 2);
-    ctx.arc(26, -12, 12, 0, Math.PI * 2);
-    ctx.fill();
+    // Traditional Wooden Wheels with Spokes & Brass Hubcaps
+    [-28, 28].forEach(wx => {
+      ctx.fillStyle = '#451a03';
+      ctx.beginPath();
+      ctx.arc(wx, -14, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffd152';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(wx, -14, 14, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Wooden Spokes
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 1.5;
+      for (let sp = 0; sp < 4; sp++) {
+        const ang = (sp * Math.PI) / 4;
+        ctx.beginPath();
+        ctx.moveTo(wx + Math.cos(ang) * 13, -14 + Math.sin(ang) * 13);
+        ctx.lineTo(wx - Math.cos(ang) * 13, -14 - Math.sin(ang) * 13);
+        ctx.stroke();
+      }
+
+      // Brass Center Hub
+      ctx.fillStyle = '#ffd152';
+      ctx.beginPath();
+      ctx.arc(wx, -14, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Carved Wooden Cart Body (Thela)
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(-38, -42, 76, 28);
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-38, -42, 76, 28);
+
+    // Carved side slats & floral border
     ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(-26, -12, 4, 0, Math.PI * 2);
-    ctx.arc(26, -12, 4, 0, Math.PI * 2);
-    ctx.fill();
+    for (let s = -32; s <= 32; s += 12) {
+      ctx.fillRect(s, -38, 3, 20);
+    }
 
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(-34, -38, 68, 26);
-
-    ctx.fillStyle = '#d62828';
+    // Triangular Festive Saffron Canopy Roof
+    ctx.fillStyle = '#ea580c';
     ctx.beginPath();
-    ctx.moveTo(-38, -38);
-    ctx.lineTo(0, -56);
-    ctx.lineTo(38, -38);
+    ctx.moveTo(-42, -42);
+    ctx.lineTo(0, -64);
+    ctx.lineTo(42, -42);
     ctx.closePath();
     ctx.fill();
 
+    // Gold Canopy Finial & Trim
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
-    ctx.arc(0, -56, 4, 0, Math.PI * 2);
+    ctx.arc(0, -66, 5, 0, Math.PI * 2);
     ctx.fill();
+
+    // Marigold Garland along the cart roof edge
+    for (let f = -38; f <= 38; f += 8) {
+      ctx.fillStyle = (f % 16 === 0) ? '#ffd152' : '#ff8426';
+      ctx.beginPath();
+      ctx.arc(f, -42, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 }
 
@@ -1463,28 +1571,51 @@ class CollectibleManager {
   }
 
   renderModak(ctx) {
-    const pulse = Math.sin(Date.now() * 0.008) * 3;
-    ctx.shadowColor = '#ffd152';
-    ctx.shadowBlur = 12 + pulse;
+    const pulse = Math.sin(Date.now() * 0.008) * 4;
+    const spinTilt = Math.sin(Date.now() * 0.005) * 0.15;
+    ctx.rotate(spinTilt);
 
-    ctx.fillStyle = '#fff7eb';
+    // Divine Radiating Golden Aura
+    const aura = ctx.createRadialGradient(0, -4, 4, 0, -4, 28 + pulse);
+    aura.addColorStop(0, 'rgba(255, 235, 150, 0.7)');
+    aura.addColorStop(0.5, 'rgba(255, 180, 20, 0.35)');
+    aura.addColorStop(1, 'rgba(255, 150, 0, 0)');
+    ctx.fillStyle = aura;
     ctx.beginPath();
-    ctx.moveTo(0, -26);
-    ctx.bezierCurveTo(16, -14, 20, 10, 0, 16);
-    ctx.bezierCurveTo(-20, 10, -16, -14, 0, -26);
+    ctx.arc(0, -4, 28 + pulse, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.strokeStyle = '#f39c12';
-    ctx.lineWidth = 2;
+    // 3D Pleated Golden Modak Body
+    const modakGrad = ctx.createLinearGradient(-15, -28, 15, 16);
+    modakGrad.addColorStop(0, '#fffbeb');
+    modakGrad.addColorStop(0.3, '#fef3c7');
+    modakGrad.addColorStop(0.7, '#fde68a');
+    modakGrad.addColorStop(1, '#f59e0b');
+    ctx.fillStyle = modakGrad;
+
     ctx.beginPath();
-    ctx.moveTo(0, -24); ctx.lineTo(0, 14);
-    ctx.moveTo(-2, -22); ctx.quadraticCurveTo(-10, 0, -6, 12);
-    ctx.moveTo(2, -22); ctx.quadraticCurveTo(10, 0, 6, 12);
+    ctx.moveTo(0, -28);
+    ctx.bezierCurveTo(18, -14, 22, 12, 0, 18);
+    ctx.bezierCurveTo(-22, 12, -18, -14, 0, -28);
+    ctx.fill();
+
+    // Golden Pleat Ribs (Traditional Modak Folds)
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(0, -26); ctx.lineTo(0, 16);
+    ctx.moveTo(-3, -24); ctx.quadraticCurveTo(-11, 0, -7, 14);
+    ctx.moveTo(3, -24); ctx.quadraticCurveTo(11, 0, 7, 14);
+    ctx.moveTo(-5, -20); ctx.quadraticCurveTo(-17, 3, -13, 11);
+    ctx.moveTo(5, -20); ctx.quadraticCurveTo(17, 3, 13, 11);
     ctx.stroke();
 
+    // Top Sacred Kesar (Saffron Strand & Gold Tip)
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(-1, -30, 2, 4);
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
-    ctx.arc(0, -26, 3.5, 0, Math.PI * 2);
+    ctx.arc(0, -28, 3.5, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -1492,24 +1623,34 @@ class CollectibleManager {
     const spin = Math.cos(Date.now() * 0.007);
     ctx.scale(spin, 1);
 
-    ctx.shadowColor = '#f59e0b';
-    ctx.shadowBlur = 10;
+    // Warm Golden Radial Glow
+    ctx.shadowColor = '#ffd152';
+    ctx.shadowBlur = 12;
 
-    ctx.fillStyle = '#f59e0b';
+    // Metallic Outer Rim
+    const coinGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 18);
+    coinGrad.addColorStop(0, '#fef08a');
+    coinGrad.addColorStop(0.6, '#ffd152');
+    coinGrad.addColorStop(1, '#b45309');
+    ctx.fillStyle = coinGrad;
     ctx.beginPath();
-    ctx.arc(0, 0, 16, 0, Math.PI * 2);
+    ctx.arc(0, 0, 17, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#ffd152';
+    // Inner Coin Face with Specular Rim
+    ctx.strokeStyle = '#fef9c3';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(0, 0, 12, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.arc(0, 0, 13.5, 0, Math.PI * 2);
+    ctx.stroke();
 
-    ctx.fillStyle = '#d97706';
-    ctx.font = 'bold 10px sans-serif';
+    // Engraved Sacred Om Symbol
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#78350f';
+    ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('ॐ', 0, 0);
+    ctx.fillText('ॐ', 0, 1);
   }
 }
 
@@ -2046,32 +2187,120 @@ class EnvironmentManager {
     this.renderHorizonGaneshaDestination(ctx, width, horizon);
   }
 
+  // LAYER 3: CONTINUOUS INDIAN FESTIVAL ARCHITECTURE & SKYLINE
   renderParallaxSilhouettes(ctx, width, horizon) {
-    const scrollOffset = (this.game.distance * 0.15) % 400;
+    const dist = this.game.distance;
+    const isSunset = this.phase === 1;
+    const isTwilight = this.phase === 2;
 
-    ctx.fillStyle = this.phase === 1 ? '#451228' : '#050816';
+    // 1. Far Skyline Silhouette (Stepped Temple Shikharas, Kalashes, Pandal Domes)
+    const farOffset = (dist * 0.08) % 360;
+    ctx.fillStyle = isSunset ? '#3b0d26' : (isTwilight ? '#160829' : '#040612');
     ctx.beginPath();
     ctx.moveTo(0, horizon);
 
-    for (let x = -scrollOffset; x < width + 400; x += 120) {
+    for (let x = -farOffset; x < width + 360; x += 90) {
       ctx.lineTo(x, horizon);
-      ctx.lineTo(x + 20, horizon - 28);
-      ctx.lineTo(x + 35, horizon - 62);
-      ctx.lineTo(x + 50, horizon - 28);
-      ctx.lineTo(x + 75, horizon - 18);
-      ctx.lineTo(x + 105, horizon);
+      ctx.lineTo(x + 15, horizon - 20);
+      ctx.lineTo(x + 28, horizon - 52); // Stepped Shikhara
+      ctx.lineTo(x + 45, horizon - 88); // Towering spire
+      ctx.lineTo(x + 62, horizon - 52);
+      ctx.lineTo(x + 75, horizon - 20);
+      ctx.lineTo(x + 90, horizon);
     }
     ctx.lineTo(width, horizon);
     ctx.closePath();
     ctx.fill();
 
-    // Saffron Festival Flags on spires
-    ctx.fillStyle = '#ff6b1a';
-    for (let x = -scrollOffset; x < width + 400; x += 120) {
+    // Golden Kalashes on far temple pinnacles
+    ctx.fillStyle = isSunset ? '#f59e0b' : '#ffd152';
+    for (let x = -farOffset; x < width + 360; x += 90) {
       ctx.beginPath();
-      ctx.moveTo(x + 35, horizon - 62);
-      ctx.lineTo(x + 48, horizon - 56);
-      ctx.lineTo(x + 35, horizon - 50);
+      ctx.arc(x + 45, horizon - 90, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 2. Mid-Background: Continuous 2-to-3 Story Heritage Street Facades
+    const midOffset = (dist * 0.22) % 480;
+    const wallColor = isSunset ? '#5a1a36' : (isTwilight ? '#240d3d' : '#0a0d1e');
+    const windowColor = isSunset ? 'rgba(255, 215, 120, 0.85)' : 'rgba(255, 200, 80, 0.9)';
+    const windowGlow = isSunset ? 'rgba(255, 130, 40, 0.4)' : 'rgba(255, 180, 50, 0.5)';
+
+    ctx.fillStyle = wallColor;
+    ctx.beginPath();
+    ctx.moveTo(0, horizon);
+
+    for (let x = -midOffset; x < width + 480; x += 120) {
+      const h = 42 + ((x * 13) % 28);
+      ctx.lineTo(x, horizon);
+      ctx.lineTo(x, horizon - h);
+      ctx.lineTo(x + 120, horizon - h);
+      ctx.lineTo(x + 120, horizon);
+    }
+    ctx.lineTo(width, horizon);
+    ctx.closePath();
+    ctx.fill();
+
+    // Jharokha Balconies & Arched Lit Windows
+    for (let x = -midOffset; x < width + 480; x += 120) {
+      const h = 42 + ((x * 13) % 28);
+
+      // Rooftop Balustrade & Fairy Lights
+      ctx.strokeStyle = '#ffd152';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, horizon - h);
+      ctx.lineTo(x + 120, horizon - h);
+      ctx.stroke();
+
+      for (let dot = x + 10; dot < x + 115; dot += 18) {
+        ctx.fillStyle = '#ffd152';
+        ctx.fillRect(dot, horizon - h - 3, 2.5, 2.5);
+      }
+
+      // Arched Glowing Windows with Jali effect
+      const winY = horizon - h + 12;
+      for (let w = x + 18; w < x + 110; w += 28) {
+        // Window Glow
+        ctx.fillStyle = windowGlow;
+        ctx.beginPath();
+        ctx.arc(w + 6, winY + 6, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Arched Window Frame
+        ctx.fillStyle = windowColor;
+        ctx.beginPath();
+        ctx.arc(w + 6, winY, 6, Math.PI, Math.PI * 2);
+        ctx.lineTo(w + 12, winY + 14);
+        ctx.lineTo(w, winY + 14);
+        ctx.closePath();
+        ctx.fill();
+
+        // Jali Lattice Crossbars
+        ctx.strokeStyle = wallColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(w + 6, winY - 6);
+        ctx.lineTo(w + 6, winY + 14);
+        ctx.moveTo(w, winY + 6);
+        ctx.lineTo(w + 12, winY + 6);
+        ctx.stroke();
+      }
+
+      // Saffron Festival Flag on Rooftop
+      const flagWave = Math.sin((dist * 0.08) + (x * 0.05)) * 6;
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 60, horizon - h);
+      ctx.lineTo(x + 60, horizon - h - 18);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ff6b1a';
+      ctx.beginPath();
+      ctx.moveTo(x + 60, horizon - h - 18);
+      ctx.lineTo(x + 76 + flagWave, horizon - h - 12);
+      ctx.lineTo(x + 60, horizon - h - 6);
       ctx.closePath();
       ctx.fill();
     }
@@ -2422,72 +2651,565 @@ class EnvironmentManager {
       ctx.stroke();
     }
 
-    // 5. Render Overhead Light Festoons Spanning across the Road
+    // 5. Render Continuous 3D Street Architecture & Connected Bazaars (Layer 2)
+    this.renderContinuousFacades(ctx);
+
+    // 6. Render Monumental 3D World Landmarks
+    this.render3DLandmarks(ctx);
+
+    // 7. Render Overhead Light Festoons Spanning across the Road
     this.renderOverheadFestoons(ctx);
 
-    // 6. Render Dense Roadside Scenery (Sorted Back-to-Front)
+    // 8. Render Dense Roadside Scenery (Sorted Back-to-Front)
     this.renderRoadsideScenery(ctx);
 
     ctx.restore();
   }
 
-  // OVERHEAD FESTIVE LIGHT FESTOONS (Connecting left and right sides)
+  // LAYER 2: CONTINUOUS BAZAAR ARCHITECTURE (Left: Mithai Bazaar, Right: Flower Bazaar)
+  renderContinuousFacades(ctx) {
+    const persp = this.game.perspective;
+    const zStep = 55;
+    const scrollOffset = (this.game.distance * 2.2) % zStep;
+
+    for (let z = CONFIG.ROAD_LENGTH + 60; z >= -zStep; z -= zStep) {
+      const zNear = Math.max(2, z - scrollOffset);
+      const zFar = zNear + zStep;
+
+      // Projection points for Left Facade
+      const pLNearBot = persp.project(-2.5, 0, zNear);
+      const pLFarBot = persp.project(-2.5, 0, zFar);
+      const pLNearTop = persp.project(-2.5, 175, zNear);
+      const pLFarTop = persp.project(-2.5, 175, zFar);
+
+      if (pLNearBot.scale > 0.04) {
+        // --- LEFT BUILDING WALL (Mithai Bazaar & Heritage Havelis) ---
+        ctx.save();
+        const bayIndex = Math.floor((this.game.distance + zNear) / zStep);
+        const wallGradL = ctx.createLinearGradient(pLNearTop.x, pLNearTop.y, pLNearBot.x, pLNearBot.y);
+        wallGradL.addColorStop(0, '#5a1226'); // Rich Crimson Haveli upper
+        wallGradL.addColorStop(0.5, '#7f1d1d');
+        wallGradL.addColorStop(1, '#991b1b'); // Terracotta ground floor
+        ctx.fillStyle = wallGradL;
+
+        ctx.beginPath();
+        ctx.moveTo(pLFarTop.x, pLFarTop.y);
+        ctx.lineTo(pLNearTop.x, pLNearTop.y);
+        ctx.lineTo(pLNearBot.x, pLNearBot.y);
+        ctx.lineTo(pLFarBot.x, pLFarBot.y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Upper Floor Jharokha Balcony & Glowing Arched Jali Window
+        const pLWinNear = persp.project(-2.5, 105, zNear + zStep * 0.35);
+        if (pLWinNear.scale > 0.07) {
+          const wScale = pLWinNear.scale;
+          // Amber Window Glow
+          ctx.fillStyle = 'rgba(255, 200, 80, 0.45)';
+          ctx.beginPath();
+          ctx.arc(pLWinNear.x, pLWinNear.y, 16 * wScale, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Arched Window
+          ctx.fillStyle = '#ffd152';
+          ctx.beginPath();
+          ctx.arc(pLWinNear.x, pLWinNear.y, 8 * wScale, Math.PI, Math.PI * 2);
+          ctx.lineTo(pLWinNear.x + 8 * wScale, pLWinNear.y + 12 * wScale);
+          ctx.lineTo(pLWinNear.x - 8 * wScale, pLWinNear.y + 12 * wScale);
+          ctx.closePath();
+          ctx.fill();
+
+          // Jharokha Balcony Base
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(pLWinNear.x - 12 * wScale, pLWinNear.y + 10 * wScale, 24 * wScale, 6 * wScale);
+        }
+
+        // Ground Floor: Striped Saffron & Gold Shop Awning Canopy
+        const pLAwnNear = persp.project(-2.5, 52, zNear + 6);
+        const pLAwnFar = persp.project(-2.5, 52, zFar - 6);
+        const pLAwnEdgeNear = persp.project(-2.1, 42, zNear + 6);
+        const pLAwnEdgeFar = persp.project(-2.1, 42, zFar - 6);
+
+        ctx.fillStyle = (bayIndex % 2 === 0) ? '#ff8426' : '#ea580c';
+        ctx.beginPath();
+        ctx.moveTo(pLAwnFar.x, pLAwnFar.y);
+        ctx.lineTo(pLAwnNear.x, pLAwnNear.y);
+        ctx.lineTo(pLAwnEdgeNear.x, pLAwnEdgeNear.y);
+        ctx.lineTo(pLAwnEdgeFar.x, pLAwnEdgeFar.y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Awning Gold Stripes
+        ctx.strokeStyle = '#ffd152';
+        ctx.lineWidth = Math.max(1, 2.5 * pLAwnNear.scale);
+        ctx.beginPath();
+        ctx.moveTo((pLAwnFar.x + pLAwnNear.x) * 0.5, (pLAwnFar.y + pLAwnNear.y) * 0.5);
+        ctx.lineTo((pLAwnEdgeFar.x + pLAwnEdgeNear.x) * 0.5, (pLAwnEdgeFar.y + pLAwnEdgeNear.y) * 0.5);
+        ctx.stroke();
+
+        // Warm Shop Interior Glow
+        const pLShop = persp.project(-2.5, 18, zNear + zStep * 0.5);
+        if (pLShop.scale > 0.08) {
+          ctx.fillStyle = 'rgba(255, 209, 82, 0.25)';
+          ctx.fillRect(pLShop.x - 22 * pLShop.scale, pLShop.y - 18 * pLShop.scale, 44 * pLShop.scale, 36 * pLShop.scale);
+
+          // Tiered Brass Thalis with Modaks
+          ctx.fillStyle = '#ffd152';
+          ctx.fillRect(pLShop.x - 18 * pLShop.scale, pLShop.y + 4 * pLShop.scale, 36 * pLShop.scale, 3 * pLShop.scale);
+          ctx.fillStyle = '#fff7eb';
+          for (let m = -14; m <= 14; m += 7) {
+            ctx.beginPath();
+            ctx.arc(pLShop.x + m * pLShop.scale, pLShop.y + 1 * pLShop.scale, 3 * pLShop.scale, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Connecting Arch Spanning Adjacent Bays
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = Math.max(1.5, 4 * pLNearBot.scale);
+        ctx.beginPath();
+        ctx.moveTo(pLNearTop.x, pLNearTop.y);
+        ctx.lineTo(pLFarTop.x, pLFarTop.y);
+        ctx.stroke();
+
+        // Rooftop Fairy Light Garland
+        ctx.strokeStyle = '#ffd152';
+        ctx.lineWidth = Math.max(1, 2 * pLNearTop.scale);
+        ctx.beginPath();
+        ctx.moveTo(pLFarTop.x, pLFarTop.y);
+        ctx.quadraticCurveTo((pLFarTop.x + pLNearTop.x) * 0.5, (pLFarTop.y + pLNearTop.y) * 0.5 + 8 * pLNearTop.scale, pLNearTop.x, pLNearTop.y);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      // Projection points for Right Facade
+      const pRNearBot = persp.project(2.5, 0, zNear);
+      const pRFarBot = persp.project(2.5, 0, zFar);
+      const pRNearTop = persp.project(2.5, 175, zNear);
+      const pRFarTop = persp.project(2.5, 175, zFar);
+
+      if (pRNearBot.scale > 0.04) {
+        // --- RIGHT BUILDING WALL (Flower Bazaar & Festival Shrines) ---
+        ctx.save();
+        const bayIndexR = Math.floor((this.game.distance + zNear + 20) / zStep);
+        const wallGradR = ctx.createLinearGradient(pRNearTop.x, pRNearTop.y, pRNearBot.x, pRNearBot.y);
+        wallGradR.addColorStop(0, '#4a154b'); // Royal Plum upper
+        wallGradR.addColorStop(0.5, '#78350f');
+        wallGradR.addColorStop(1, '#92400e'); // Warm Teak bazaar
+        ctx.fillStyle = wallGradR;
+
+        ctx.beginPath();
+        ctx.moveTo(pRFarTop.x, pRFarTop.y);
+        ctx.lineTo(pRNearTop.x, pRNearTop.y);
+        ctx.lineTo(pRNearBot.x, pRNearBot.y);
+        ctx.lineTo(pRFarBot.x, pRFarBot.y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Upper Floor Jharokha Balcony & Arch Window
+        const pRWinNear = persp.project(2.5, 105, zNear + zStep * 0.35);
+        if (pRWinNear.scale > 0.07) {
+          const wScale = pRWinNear.scale;
+          // Amber Window Glow
+          ctx.fillStyle = 'rgba(255, 200, 80, 0.45)';
+          ctx.beginPath();
+          ctx.arc(pRWinNear.x, pRWinNear.y, 16 * wScale, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Arched Window
+          ctx.fillStyle = '#ffd152';
+          ctx.beginPath();
+          ctx.arc(pRWinNear.x, pRWinNear.y, 8 * wScale, Math.PI, Math.PI * 2);
+          ctx.lineTo(pRWinNear.x + 8 * wScale, pRWinNear.y + 12 * wScale);
+          ctx.lineTo(pRWinNear.x - 8 * wScale, pRWinNear.y + 12 * wScale);
+          ctx.closePath();
+          ctx.fill();
+
+          // Hanging Star Kandil Lantern
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.moveTo(pRWinNear.x, pRWinNear.y + 18 * wScale);
+          ctx.lineTo(pRWinNear.x + 6 * wScale, pRWinNear.y + 26 * wScale);
+          ctx.lineTo(pRWinNear.x, pRWinNear.y + 34 * wScale);
+          ctx.lineTo(pRWinNear.x - 6 * wScale, pRWinNear.y + 26 * wScale);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Ground Floor: Flower Bazaar Bamboo Awning with Cascading Marigold Garlands
+        const pRAwnNear = persp.project(2.5, 52, zNear + 6);
+        const pRAwnFar = persp.project(2.5, 52, zFar - 6);
+        const pRAwnEdgeNear = persp.project(2.1, 42, zNear + 6);
+        const pRAwnEdgeFar = persp.project(2.1, 42, zFar - 6);
+
+        ctx.fillStyle = (bayIndexR % 2 === 0) ? '#d97706' : '#b45309';
+        ctx.beginPath();
+        ctx.moveTo(pRAwnFar.x, pRAwnFar.y);
+        ctx.lineTo(pRAwnNear.x, pRAwnNear.y);
+        ctx.lineTo(pRAwnEdgeNear.x, pRAwnEdgeNear.y);
+        ctx.lineTo(pRAwnEdgeFar.x, pRAwnEdgeFar.y);
+        ctx.closePath();
+        ctx.fill();
+
+        // Cascading Marigold Garland Curtains along Flower Stall
+        const pRShop = persp.project(2.5, 18, zNear + zStep * 0.5);
+        if (pRShop.scale > 0.08) {
+          const sScale = pRShop.scale;
+          // Hanging Marigold Garlands
+          for (let col = -16; col <= 16; col += 8) {
+            ctx.fillStyle = (col % 16 === 0) ? '#ffd152' : '#ff8426';
+            for (let row = -14; row <= 16; row += 7) {
+              ctx.beginPath();
+              ctx.arc(pRShop.x + col * sScale, pRShop.y + row * sScale, 2.8 * sScale, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+          // Red Rose Petal Basket at counter base
+          ctx.fillStyle = '#dc2626';
+          ctx.beginPath();
+          ctx.ellipse(pRShop.x, pRShop.y + 14 * sScale, 12 * sScale, 5 * sScale, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Rooftop Fairy Light Garland
+        ctx.strokeStyle = '#ffd152';
+        ctx.lineWidth = Math.max(1, 2 * pRNearTop.scale);
+        ctx.beginPath();
+        ctx.moveTo(pRFarTop.x, pRFarTop.y);
+        ctx.quadraticCurveTo((pRFarTop.x + pRNearTop.x) * 0.5, (pRFarTop.y + pRNearTop.y) * 0.5 + 8 * pRNearTop.scale, pRNearTop.x, pRNearTop.y);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+    }
+  }
+
+  // MONUMENTAL 3D WORLD LANDMARKS
+  render3DLandmarks(ctx) {
+    const dist = this.game.distance;
+    const persp = this.game.perspective;
+
+    // 1. FESTIVAL ENTRANCE GATEWAY (Active around 0 - 150m)
+    if (dist < 150) {
+      const zGate = 100 - dist;
+      if (zGate > 5 && zGate < CONFIG.ROAD_LENGTH) {
+        this.renderWelcomeToranGateway(ctx, zGate);
+      }
+    }
+
+    // 2. DHOL CHOWK PERFORMANCE PAVILION (Active around 350 - 650m)
+    if (dist >= 350 && dist < 650) {
+      const zChowk = 500 - dist;
+      if (zChowk > 5 && zChowk < CONFIG.ROAD_LENGTH) {
+        this.renderDholChowkPavilion(ctx, zChowk);
+      }
+    }
+
+    // 3. FLOWER BAZAAR GRAND ARCADE (Active around 850 - 1200m)
+    if (dist >= 850 && dist < 1200) {
+      const zFlower = 1000 - dist;
+      if (zFlower > 5 && zFlower < CONFIG.ROAD_LENGTH) {
+        this.renderFlowerBazaarArcade(ctx, zFlower);
+      }
+    }
+
+    // 4. GRAND PANDAL STREET GATE (Active around 1300 - 1700m)
+    if (dist >= 1300 && dist < 1700) {
+      const zPandal = 1500 - dist;
+      if (zPandal > 5 && zPandal < CONFIG.ROAD_LENGTH) {
+        this.renderGrandPandalGate(ctx, zPandal);
+      }
+    }
+
+    // 5. GANESHA SANCTUM CEREMONIAL ENTRANCE (Active around 2100 - 2400m)
+    if (dist >= 2100) {
+      const zSanctum = CONFIG.DESTINATION_DISTANCE - dist;
+      if (zSanctum > 5 && zSanctum < CONFIG.ROAD_LENGTH) {
+        this.renderGaneshaSanctumEntrance(ctx, zSanctum);
+      }
+    }
+  }
+
+  // 1. Monumental Welcome Toran Gateway
+  renderWelcomeToranGateway(ctx, z) {
+    const persp = this.game.perspective;
+    const pL = persp.project(-2.5, 0, z);
+    const pR = persp.project(2.5, 0, z);
+    const pTopMid = persp.project(0, 155, z);
+    const scale = pTopMid.scale;
+    if (scale <= 0.05) return;
+
+    ctx.save();
+    // Massive Carved Golden Pillars
+    ctx.fillStyle = '#ffd152';
+    const pw = 24 * scale;
+    const ph = 160 * scale;
+    ctx.fillRect(pL.x - pw * 0.5, pL.y - ph, pw, ph);
+    ctx.fillRect(pR.x - pw * 0.5, pR.y - ph, pw, ph);
+
+    // Green Banana Stems at base
+    ctx.fillStyle = '#15803d';
+    ctx.fillRect(pL.x - pw * 0.8, pL.y - ph * 0.45, pw * 0.6, ph * 0.45);
+    ctx.fillRect(pR.x + pw * 0.2, pR.y - ph * 0.45, pw * 0.6, ph * 0.45);
+
+    // Multi-tier Crimson Arch spanning across road
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.moveTo(pL.x, pL.y - ph * 0.8);
+    ctx.quadraticCurveTo(pTopMid.x, pTopMid.y - 20 * scale, pR.x, pR.y - ph * 0.8);
+    ctx.lineTo(pR.x, pR.y - ph);
+    ctx.quadraticCurveTo(pTopMid.x, pTopMid.y - 45 * scale, pL.x, pL.y - ph);
+    ctx.closePath();
+    ctx.fill();
+
+    // Golden Kalash Finials atop Arch
+    ctx.fillStyle = '#ffd152';
+    ctx.beginPath();
+    ctx.arc(pTopMid.x, pTopMid.y - 46 * scale, 12 * scale, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sanskrit Welcome Signboard: ॥ स्वागतम् ॥
+    ctx.fillStyle = '#ffd152';
+    ctx.font = `bold ${Math.max(10, 16 * scale)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('॥ स्वागतम् ॥', pTopMid.x, pTopMid.y - 28 * scale);
+
+    // Hanging Marigold Garlands & Brass Bells
+    for (let b = 1; b < 6; b++) {
+      const bx = pL.x + (pR.x - pL.x) * (b / 6);
+      const by = (pL.y - ph * 0.8) + Math.sin(b / 6 * Math.PI) * 20 * scale;
+      ctx.fillStyle = '#ffd152';
+      ctx.beginPath();
+      ctx.arc(bx, by + 12 * scale, 5 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // 2. Dhol Chowk Elevated Performance Pavilion
+  renderDholChowkPavilion(ctx, z) {
+    const persp = this.game.perspective;
+    const pStage = persp.project(-3.2, 0, z);
+    const scale = pStage.scale;
+    if (scale <= 0.05) return;
+
+    ctx.save();
+    ctx.translate(pStage.x, pStage.y);
+    ctx.scale(scale, scale);
+
+    // Elevated Saffron Wooden Stage
+    ctx.fillStyle = '#9a3412';
+    ctx.fillRect(-65, -35, 130, 35);
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(-70, -42, 140, 9);
+
+    // Golden Railing
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-65, -55, 130, 5);
+    for (let r = -60; r <= 60; r += 20) {
+      ctx.fillRect(r, -55, 4, 15);
+    }
+
+    // 4 Animated Dholak Drummers beating in rhythm
+    const beat = Math.sin(Date.now() * 0.016);
+    for (let d = -45; d <= 45; d += 30) {
+      // Drummer body
+      ctx.fillStyle = '#ff6b1a';
+      ctx.fillRect(d - 8, -95, 16, 28);
+      ctx.fillStyle = '#fff7eb';
+      ctx.fillRect(d - 9, -68, 18, 18);
+      // Kolhapuri Pagdi
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.arc(d, -106, 8, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffd152';
+      ctx.fillRect(d - 2, -112, 4, 6);
+      // Dhol Drum
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.ellipse(d, -82, 14, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Animated Striking Arms
+      ctx.strokeStyle = '#ffd152';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(d - 8, -90);
+      ctx.lineTo(d - 2, -82 + beat * 6);
+      ctx.moveTo(d + 8, -90);
+      ctx.lineTo(d + 2, -82 - beat * 6);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // 3. Flower Bazaar Grand Floral Arcade
+  renderFlowerBazaarArcade(ctx, z) {
+    const persp = this.game.perspective;
+    const pL = persp.project(-2.6, 0, z);
+    const pR = persp.project(2.6, 0, z);
+    const pMid = persp.project(0, 145, z);
+    const scale = pMid.scale;
+    if (scale <= 0.05) return;
+
+    ctx.save();
+    // Flowered Trellis Columns
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(pL.x - 8 * scale, pL.y - 145 * scale, 16 * scale, 145 * scale);
+    ctx.fillRect(pR.x - 8 * scale, pR.y - 145 * scale, 16 * scale, 145 * scale);
+
+    // Cascading Marigold Chandeliers across the road
+    for (let c = 1; c < 8; c++) {
+      const cx = pL.x + (pR.x - pL.x) * (c / 8);
+      const cy = pMid.y + Math.sin(c / 8 * Math.PI) * 18 * scale;
+      for (let r = 0; r < 5; r++) {
+        ctx.fillStyle = (r % 2 === 0) ? '#ffd152' : '#ff8426';
+        ctx.beginPath();
+        ctx.arc(cx, cy + r * 10 * scale, 4.5 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  // 4. Grand Pandal Street Towering Gateway
+  renderGrandPandalGate(ctx, z) {
+    const persp = this.game.perspective;
+    const pL = persp.project(-2.7, 0, z);
+    const pR = persp.project(2.7, 0, z);
+    const pMid = persp.project(0, 185, z);
+    const scale = pMid.scale;
+    if (scale <= 0.05) return;
+
+    ctx.save();
+    // Towering Crimson Pandal Gateway with Multi-tier Shikharas
+    ctx.fillStyle = '#7f1d1d';
+    ctx.fillRect(pL.x - 18 * scale, pL.y - 170 * scale, 36 * scale, 170 * scale);
+    ctx.fillRect(pR.x - 18 * scale, pR.y - 170 * scale, 36 * scale, 170 * scale);
+
+    // Arch Overhead
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.moveTo(pL.x, pL.y - 120 * scale);
+    ctx.quadraticCurveTo(pMid.x, pMid.y - 25 * scale, pR.x, pR.y - 120 * scale);
+    ctx.lineTo(pR.x, pR.y - 165 * scale);
+    ctx.quadraticCurveTo(pMid.x, pMid.y - 65 * scale, pL.x, pL.y - 165 * scale);
+    ctx.closePath();
+    ctx.fill();
+
+    // Golden Kalash Finials
+    ctx.fillStyle = '#ffd152';
+    ctx.beginPath();
+    ctx.arc(pMid.x, pMid.y - 68 * scale, 14 * scale, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sacred Om Symbol in Gate Center
+    ctx.fillStyle = '#ffd152';
+    ctx.font = `bold ${Math.max(12, 22 * scale)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ॐ', pMid.x, pMid.y - 35 * scale);
+    ctx.restore();
+  }
+
+  // 5. Ganesha Sanctum Ceremonial Entrance
+  renderGaneshaSanctumEntrance(ctx, z) {
+    const persp = this.game.perspective;
+    const pL = persp.project(-2.8, 0, z);
+    const pR = persp.project(2.8, 0, z);
+    const pMid = persp.project(0, 210, z);
+    const scale = pMid.scale;
+    if (scale <= 0.05) return;
+
+    ctx.save();
+    // Radiant Golden Light Beam
+    const beam = ctx.createLinearGradient(pMid.x, pMid.y - 80 * scale, pMid.x, pL.y);
+    beam.addColorStop(0, 'rgba(255, 230, 120, 0.85)');
+    beam.addColorStop(0.5, 'rgba(255, 160, 20, 0.45)');
+    beam.addColorStop(1, 'rgba(255, 100, 10, 0)');
+    ctx.fillStyle = beam;
+    ctx.beginPath();
+    ctx.moveTo(pMid.x - 80 * scale, pMid.y - 80 * scale);
+    ctx.lineTo(pMid.x + 80 * scale, pMid.y - 80 * scale);
+    ctx.lineTo(pR.x + 40 * scale, pR.y);
+    ctx.lineTo(pL.x - 40 * scale, pL.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // OVERHEAD FESTIVE LIGHT FESTOONS (Connecting left and right buildings across the street)
   renderOverheadFestoons(ctx) {
     const persp = this.game.perspective;
     const sorted = [...this.overheadFestoons].sort((a, b) => b.z - a.z);
+    const pulse = Math.sin(Date.now() * 0.004) * 0.25 + 0.75;
 
     sorted.forEach(f => {
-      const pL = persp.project(-1.75, 75, f.z);
-      const pR = persp.project(1.75, 75, f.z);
-      const pMid = persp.project(0, 55, f.z);
+      const pL = persp.project(-2.5, 95, f.z);
+      const pR = persp.project(2.5, 95, f.z);
+      const pMid = persp.project(0, 68, f.z);
       const scale = pMid.scale;
       if (scale <= 0.05) return;
 
       ctx.save();
       // Sagging Catenary Garland string
       ctx.strokeStyle = '#d97706';
-      ctx.lineWidth = Math.max(1.5, 3 * scale);
+      ctx.lineWidth = Math.max(1.5, 3.5 * scale);
       ctx.beginPath();
       ctx.moveTo(pL.x, pL.y);
       ctx.quadraticCurveTo(pMid.x, pMid.y, pR.x, pR.y);
       ctx.stroke();
 
-      // Hanging Marigold Beads & Fairy Lights
-      const lightCount = 7;
+      // Hanging Marigold Beads & Fairy Lights with Pulsing Glow
+      const lightCount = 9;
       for (let i = 1; i < lightCount; i++) {
         const t = i / lightCount;
         const lx = (1 - t) * (1 - t) * pL.x + 2 * (1 - t) * t * pMid.x + t * t * pR.x;
         const ly = (1 - t) * (1 - t) * pL.y + 2 * (1 - t) * t * pMid.y + t * t * pR.y;
 
-        // Glowing Fairy Light dot
-        const color = (i % 2 === 0) ? '#ffd152' : '#ff6b1a';
+        // Glowing Fairy Light halo
+        const color = (i % 2 === 0) ? '#ffd152' : '#ff8426';
         ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 8 * pulse;
         ctx.beginPath();
-        ctx.arc(lx, ly, Math.max(1.5, 4 * scale), 0, Math.PI * 2);
+        ctx.arc(lx, ly, Math.max(1.5, 4.5 * scale), 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
 
         // Hanging Mango leaf / flower tassel
-        if (scale > 0.12 && i % 2 === 1) {
+        if (scale > 0.11 && i % 2 === 1) {
           ctx.fillStyle = '#15803d';
           ctx.beginPath();
           ctx.moveTo(lx, ly);
-          ctx.lineTo(lx + 2 * scale, ly + 8 * scale);
-          ctx.lineTo(lx - 2 * scale, ly + 8 * scale);
+          ctx.lineTo(lx + 2.5 * scale, ly + 9 * scale);
+          ctx.lineTo(lx - 2.5 * scale, ly + 9 * scale);
           ctx.closePath();
           ctx.fill();
         }
       }
 
-      // Center Star Kandil hanging overhead
-      if (scale > 0.14) {
+      // Center Star Kandil hanging overhead with flutter ribbons
+      if (scale > 0.12) {
         ctx.fillStyle = '#f43f5e';
+        ctx.shadowColor = '#ffd152';
+        ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.moveTo(pMid.x, pMid.y + 2 * scale);
-        ctx.lineTo(pMid.x + 6 * scale, pMid.y + 10 * scale);
-        ctx.lineTo(pMid.x, pMid.y + 18 * scale);
-        ctx.lineTo(pMid.x - 6 * scale, pMid.y + 10 * scale);
+        ctx.lineTo(pMid.x + 7 * scale, pMid.y + 11 * scale);
+        ctx.lineTo(pMid.x, pMid.y + 20 * scale);
+        ctx.lineTo(pMid.x - 7 * scale, pMid.y + 11 * scale);
         ctx.closePath();
         ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Fluttering Golden Ribbons
+        ctx.fillStyle = '#ffd152';
+        const ribbonWiggle = Math.sin(Date.now() * 0.006 + f.z) * 3 * scale;
+        ctx.fillRect(pMid.x - 4 * scale, pMid.y + 20 * scale, 2 * scale, 12 * scale);
+        ctx.fillRect(pMid.x + 2 * scale + ribbonWiggle, pMid.y + 20 * scale, 2 * scale, 14 * scale);
       }
       ctx.restore();
     });
@@ -2640,38 +3362,40 @@ class EnvironmentManager {
     ctx.fill();
   }
 
-  // 3. Dhol-Tasha Drum Group (Animated arms swinging drumsticks!)
+  // 3. Dhol-Tasha Drum Group (Animated arms swinging drumsticks in rhythm)
   renderDholGroup(ctx) {
-    const beatPhase = Math.sin(Date.now() * 0.015);
+    const beatPhase = Math.sin(Date.now() * 0.016);
 
     for (let i = 0; i < 2; i++) {
-      const dx = (i === 0) ? -20 : 20;
+      const dx = (i === 0) ? -22 : 22;
 
-      // Drummer Body
-      ctx.fillStyle = '#ff6b1a'; // Saffron kurta
-      ctx.fillRect(dx - 10, -56, 20, 36);
+      // Drummer Body (Saffron Kurta)
+      ctx.fillStyle = (i === 0) ? '#ff6b1a' : '#ea580c';
+      ctx.fillRect(dx - 11, -58, 22, 38);
 
-      // White silk dhoti
+      // White Silk Dhoti with Gold Border
       ctx.fillStyle = '#fff7eb';
-      ctx.fillRect(dx - 11, -20, 22, 20);
+      ctx.fillRect(dx - 12, -20, 24, 20);
+      ctx.fillStyle = '#ffd152';
+      ctx.fillRect(dx - 12, -2, 24, 2);
 
-      // Head & Red Kolhapuri Pagdi
+      // Head & Kolhapuri Pagdi with Gold Kalgi
       ctx.fillStyle = '#e0a876';
       ctx.beginPath();
-      ctx.arc(dx, -66, 9, 0, Math.PI * 2);
+      ctx.arc(dx, -68, 9, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#dc2626';
       ctx.beginPath();
-      ctx.arc(dx, -72, 10, Math.PI, Math.PI * 2);
+      ctx.arc(dx, -74, 11, Math.PI, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#ffd152'; // Gold kalgi
-      ctx.fillRect(dx - 2, -80, 4, 8);
+      ctx.fillStyle = '#ffd152'; // Gold Kalgi
+      ctx.fillRect(dx - 2, -83, 4, 9);
 
-      // Dhol Drum slung across chest
+      // Traditional Dhol Drum slung across chest
       ctx.fillStyle = '#78350f';
       ctx.beginPath();
-      ctx.ellipse(dx, -36, 18, 12, 0, 0, Math.PI * 2);
+      ctx.ellipse(dx, -36, 19, 13, 0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.strokeStyle = '#ffd152';
@@ -2682,53 +3406,66 @@ class EnvironmentManager {
       ctx.strokeStyle = '#ffd152';
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(dx - 10, -48);
+      ctx.moveTo(dx - 10, -50);
       ctx.lineTo(dx - 3, -36 + beatPhase * 8);
-      ctx.moveTo(dx + 10, -48);
+      ctx.moveTo(dx + 10, -50);
       ctx.lineTo(dx + 3, -36 - beatPhase * 8);
       ctx.stroke();
     }
   }
 
-  // 4. Cheering Crowd of Festival Devotees
+  // 4. Cheering Devotee Crowd (Varied Heights, Poses & Waving Saffron Flags)
   renderCrowdCheer(ctx) {
     const flagWave = Math.sin(Date.now() * 0.008) * 10;
 
-    // Crowd Silhouettes
-    for (let c = -30; c <= 30; c += 15) {
-      ctx.fillStyle = '#1e293b';
+    // Diverse Devotee Silhouettes (Adults, Children, Dancers)
+    const crowdMembers = [
+      { x: -32, h: 48, w: 9, color: '#ff6b1a', dhoti: '#fff7eb', arm: -52 },
+      { x: -16, h: 36, w: 7, color: '#f59e0b', dhoti: '#fef08a', arm: -40 }, // Child devotee
+      { x: 0,   h: 52, w: 10, color: '#dc2626', dhoti: '#fff7eb', arm: -58 },
+      { x: 16,  h: 46, w: 9, color: '#d97706', dhoti: '#fed7aa', arm: -50 },
+      { x: 32,  h: 50, w: 10, color: '#e11d48', dhoti: '#fff7eb', arm: -56 }
+    ];
+
+    crowdMembers.forEach(m => {
+      // Body (Kurta/Saree)
+      ctx.fillStyle = m.color;
+      ctx.fillRect(m.x - m.w * 0.5, -m.h + 16, m.w, m.h - 16);
+
+      // Dhoti/Lower Garment
+      ctx.fillStyle = m.dhoti;
+      ctx.fillRect(m.x - m.w * 0.5, -16, m.w, 16);
+
+      // Head
+      ctx.fillStyle = '#e0a876';
       ctx.beginPath();
-      ctx.ellipse(c, -22, 9, 22, 0, 0, Math.PI * 2);
+      ctx.arc(m.x, -m.h + 8, m.w * 0.55, 0, Math.PI * 2);
       ctx.fill();
 
+      // Raised Cheering Arms
+      ctx.strokeStyle = m.color;
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(c, -48, 6.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Raised cheering arms
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(c - 5, -34);
-      ctx.lineTo(c - 10, -56);
-      ctx.moveTo(c + 5, -34);
-      ctx.lineTo(c + 10, -56);
+      ctx.moveTo(m.x - m.w * 0.3, -m.h + 20);
+      ctx.lineTo(m.x - m.w * 0.7, m.arm);
+      ctx.moveTo(m.x + m.w * 0.3, -m.h + 20);
+      ctx.lineTo(m.x + m.w * 0.7, m.arm);
       ctx.stroke();
-    }
+    });
 
     // Sacred Saffron Flag held high
     ctx.strokeStyle = '#92400e';
     ctx.lineWidth = 3.5;
     ctx.beginPath();
     ctx.moveTo(0, -10);
-    ctx.lineTo(0, -86);
+    ctx.lineTo(0, -92);
     ctx.stroke();
 
     ctx.fillStyle = '#ff6b1a';
     ctx.beginPath();
-    ctx.moveTo(0, -86);
-    ctx.lineTo(32 + flagWave, -74);
-    ctx.lineTo(0, -62);
+    ctx.moveTo(0, -92);
+    ctx.lineTo(34 + flagWave, -78);
+    ctx.lineTo(0, -64);
     ctx.closePath();
     ctx.fill();
   }
