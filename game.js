@@ -2,6 +2,7 @@
  * ============================================================================
  * GANAPATHI RUSH 2.0 — MASTER FESTIVAL RUNNER ENGINE
  * "Run • Collect • Celebrate • Reach Bappa"
+ * Visual Overhaul: Rich, Cinematic Indian Ganesh Chaturthi Festival Street
  * Built completely from scratch with HTML5 Canvas 2D & Web Audio API
  * ============================================================================
  */
@@ -438,12 +439,10 @@ class AudioManager {
     if (!this.isPlayingRhythm) return;
     if (this.unlocked && !this.isMuted && this.ctx) {
       const t = this.ctx.currentTime;
-      // Traditional 4-beat Dholak groove: Bass, Tasha, Bass, Double-Tasha
       const isBass = (this.rhythmStep % 4 === 0) || (this.rhythmStep % 4 === 2);
       const isRim = (this.rhythmStep % 4 === 1) || (this.rhythmStep % 4 === 3);
 
       if (isBass) {
-        // Low resonant Dhol bass (Dagga)
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'sine';
@@ -458,7 +457,6 @@ class AudioManager {
       }
 
       if (isRim) {
-        // High crisp Tasha snap
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'triangle';
@@ -472,7 +470,6 @@ class AudioManager {
         osc.stop(t + 0.07);
       }
 
-      // Occasional soft temple bell on the 8th beat
       if (this.rhythmStep % 8 === 0) {
         const bell = this.ctx.createOscillator();
         const bellGain = this.ctx.createGain();
@@ -488,7 +485,6 @@ class AudioManager {
     }
 
     this.rhythmStep = (this.rhythmStep + 1) % 16;
-    // 145 BPM syncopated festive groove
     this.rhythmTimer = setTimeout(() => this.scheduleNextDholBeat(), 205);
   }
 }
@@ -515,10 +511,8 @@ class PerspectiveEngine {
     this.roadBaseHalfWidth = Math.min(w * 0.44, CONFIG.BASE_ROAD_WIDTH * 0.5);
   }
 
-  // Projects (laneX: -1 to 1, worldY: elevation, worldZ: distance from player)
   project(laneX, worldY = 0, worldZ = 0) {
     const scale = CONFIG.CAM_DEPTH / (worldZ + CONFIG.CAM_DEPTH);
-    // Perspective compression mapping
     const pRatio = Math.pow(scale, 1.28);
     const screenY = this.horizonY + (this.groundBaseY - this.horizonY) * pRatio - worldY * scale;
     const roadHalfWidthAtZ = this.roadBaseHalfWidth * scale;
@@ -536,10 +530,10 @@ class PerspectiveEngine {
 }
 
 // ----------------------------------------------------------------------------
-// 4. PARTICLE SYSTEM (Object Pooled)
+// 4. PARTICLE SYSTEM (Object Pooled, 600 Max)
 // ----------------------------------------------------------------------------
 class ParticleSystem {
-  constructor(maxParticles = 400) {
+  constructor(maxParticles = 600) {
     this.pool = [];
     for (let i = 0; i < maxParticles; i++) {
       this.pool.push({
@@ -700,9 +694,8 @@ class Player {
       this.slideTimer = 0;
       this.game.audio.playJump();
 
-      // Jump dust puff
       const proj = this.game.perspective.project(this.currentLaneX, 0, 0);
-      this.game.particles.spawn(proj.x, proj.y, 14, {
+      this.game.particles.spawn(proj.x, proj.y, 16, {
         colors: ['#ffd152', '#ffba08', '#e2e8f0'],
         minSpeed: 1,
         maxSpeed: 4,
@@ -714,7 +707,6 @@ class Player {
 
   slide() {
     if (this.isJumping) {
-      // In-air quick drop
       this.velocityY = -26.0;
       this.game.audio.playSlide();
     } else if (!this.isSliding) {
@@ -722,7 +714,6 @@ class Player {
       this.slideTimer = CONFIG.SLIDE_DURATION;
       this.game.audio.playSlide();
 
-      // Slide dust streak
       const proj = this.game.perspective.project(this.currentLaneX, 0, 0);
       this.game.particles.spawn(proj.x, proj.y, 18, {
         colors: ['#ff8426', '#ffd152', '#ffffff'],
@@ -734,11 +725,9 @@ class Player {
   }
 
   update(dt) {
-    // Smooth lane interpolation: -1 (Left), 0 (Center), 1 (Right)
     const targetX = this.lane - 1;
     this.currentLaneX += (targetX - this.currentLaneX) * Math.min(1.0, CONFIG.LANE_LERP_SPEED * dt);
 
-    // Jump Physics
     if (this.isJumping) {
       this.jumpY += this.velocityY * 60 * dt;
       this.velocityY += CONFIG.GRAVITY * dt;
@@ -749,7 +738,6 @@ class Player {
         this.isJumping = false;
         this.game.audio.playLand();
 
-        // Landing dust
         const proj = this.game.perspective.project(this.currentLaneX, 0, 0);
         this.game.particles.spawn(proj.x, proj.y, 16, {
           colors: ['#ffd152', '#ff8426', '#e2e8f0'],
@@ -761,7 +749,6 @@ class Player {
       }
     }
 
-    // Slide Timer
     if (this.isSliding) {
       this.slideTimer -= dt;
       if (this.slideTimer <= 0) {
@@ -770,16 +757,14 @@ class Player {
       }
     }
 
-    // Run animation cycle (scales with game speed)
     const speedRatio = this.game.speed / CONFIG.BASE_SPEED;
     this.runCycle += 12 * speedRatio * dt;
 
-    // Invulnerability cooldown
     if (this.invulnerableTimer > 0) {
       this.invulnerableTimer -= dt;
     }
 
-    // Emit decorative trail particles behind player
+    // Trail particles
     if (Math.random() < 0.6) {
       const proj = this.game.perspective.project(this.currentLaneX, this.jumpY * 1.5, 0);
       let colors = ['#ffd152', '#ffba08'];
@@ -807,14 +792,12 @@ class Player {
     }
   }
 
-  // Render stylized procedural festival runner
   render(ctx) {
     const proj = this.game.perspective.project(this.currentLaneX, this.jumpY * 1.5, 0);
     const px = proj.x;
     const py = proj.y;
     const scale = proj.scale;
 
-    // Invulnerability flash (rapid blinking)
     if (this.invulnerableTimer > 0 && Math.floor(Date.now() / 80) % 2 === 0) {
       return;
     }
@@ -822,7 +805,7 @@ class Player {
     ctx.save();
     ctx.translate(px, py);
 
-    // 1. Ground Shadow
+    // Ground Shadow
     const shadowScale = Math.max(0.3, 1.0 - (this.jumpY / 80));
     ctx.save();
     ctx.scale(scale * shadowScale, scale * shadowScale * 0.4);
@@ -834,7 +817,6 @@ class Player {
 
     ctx.scale(scale, scale);
 
-    // Dynamic tilt when switching lanes
     const targetX = this.lane - 1;
     const laneTilt = (targetX - this.currentLaneX) * 0.22;
     ctx.rotate(laneTilt);
@@ -842,48 +824,39 @@ class Player {
     const runBounce = this.isJumping ? 0 : Math.sin(this.runCycle) * 3.5;
     const legAngle = this.isJumping ? 0.35 : Math.sin(this.runCycle) * 0.65;
 
-    // ==========================================
-    // SLIDE POSE vs RUN / JUMP POSE
-    // ==========================================
     if (this.isSliding) {
-      // Low Crouch Sliding Posture
+      // Sliding Posture
       ctx.fillStyle = 'rgba(255, 209, 82, 0.3)';
       ctx.beginPath();
       ctx.ellipse(-10, -8, 40, 14, -0.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Dhoti legs stretched low
-      ctx.fillStyle = '#ff8426'; // Saffron dhoti
+      ctx.fillStyle = '#ff8426';
       ctx.beginPath();
       ctx.ellipse(-15, -18, 26, 12, -0.3, 0, Math.PI * 2);
       ctx.fill();
 
-      // Torso leaning low forward
-      ctx.fillStyle = '#fff7eb'; // Cream Kurta
+      ctx.fillStyle = '#fff7eb';
       ctx.beginPath();
       ctx.ellipse(12, -26, 24, 14, 0.4, 0, Math.PI * 2);
       ctx.fill();
 
-      // Gold festive border
       ctx.strokeStyle = '#ffd152';
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.arc(12, -26, 15, 0, Math.PI);
       ctx.stroke();
 
-      // Head low
       ctx.fillStyle = '#e0a876';
       ctx.beginPath();
       ctx.arc(28, -36, 12, 0, Math.PI * 2);
       ctx.fill();
 
-      // Festive Pagdi (turban)
       ctx.fillStyle = '#d62828';
       ctx.beginPath();
       ctx.arc(28, -42, 11, Math.PI, Math.PI * 2);
       ctx.fill();
 
-      // Golden kalgi plume
       ctx.fillStyle = '#ffd152';
       ctx.beginPath();
       ctx.moveTo(34, -48);
@@ -892,14 +865,14 @@ class Player {
       ctx.fill();
 
     } else {
-      // Standing / Running / Jumping Posture
+      // Running Posture
       ctx.save();
       ctx.translate(0, -32 + runBounce);
 
       // Left Leg
       ctx.save();
       ctx.rotate(legAngle);
-      ctx.fillStyle = '#ff6b1a'; // Saffron
+      ctx.fillStyle = '#ff6b1a';
       ctx.beginPath();
       ctx.roundRect(-16, 0, 12, 32, 6);
       ctx.fill();
@@ -922,13 +895,13 @@ class Player {
       ctx.fillRect(4, 30, 16, 6);
       ctx.restore();
 
-      ctx.restore(); // end legs
+      ctx.restore();
 
-      // Torso (Embroidered Kurta)
+      // Torso
       ctx.save();
       ctx.translate(0, -68 + runBounce);
 
-      // Fluttering Sash / Uttariya
+      // Fluttering Sash
       ctx.fillStyle = '#ffd152';
       ctx.beginPath();
       const sashWave = Math.sin(this.runCycle * 1.5) * 8;
@@ -939,13 +912,11 @@ class Player {
       ctx.closePath();
       ctx.fill();
 
-      // Kurta Body
-      ctx.fillStyle = '#fff7eb'; // Cream festive kurta
+      ctx.fillStyle = '#fff7eb';
       ctx.beginPath();
       ctx.roundRect(-18, -4, 36, 42, [8, 8, 4, 4]);
       ctx.fill();
 
-      // Gold embroidery trim & festive buttons
       ctx.strokeStyle = '#ffd152';
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -962,7 +933,6 @@ class Player {
 
       // Arms
       const armAngle = -legAngle * 0.8;
-      // Left Arm
       ctx.save();
       ctx.translate(-18, 2);
       ctx.rotate(armAngle);
@@ -974,7 +944,6 @@ class Player {
       ctx.fill();
       ctx.restore();
 
-      // Right Arm (Holding offering/flower ribbon)
       ctx.save();
       ctx.translate(18, 2);
       ctx.rotate(-armAngle);
@@ -984,27 +953,24 @@ class Player {
       ctx.beginPath();
       ctx.arc(0, 26, 4.5, 0, Math.PI * 2);
       ctx.fill();
-      // Marigold flower in hand
       ctx.fillStyle = '#ffba08';
       ctx.beginPath();
       ctx.arc(2, 28, 4, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
-      // Head & Festive Turban
+      // Head & Turban
       ctx.translate(0, -16);
       ctx.fillStyle = '#e0a876';
       ctx.beginPath();
       ctx.arc(0, 0, 13, 0, Math.PI * 2);
       ctx.fill();
 
-      // Tilak on forehead
       ctx.fillStyle = '#d62828';
       ctx.fillRect(-1.5, -6, 3, 7);
       ctx.fillStyle = '#ffd152';
       ctx.fillRect(-1, -1, 2, 2);
 
-      // Festive Pagdi (Turban)
       ctx.fillStyle = '#ff6b1a';
       ctx.beginPath();
       ctx.arc(0, -5, 14, Math.PI, Math.PI * 2);
@@ -1014,7 +980,6 @@ class Player {
       ctx.ellipse(0, -7, 15, 6, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Golden kalgi / broach
       ctx.fillStyle = '#ffd152';
       ctx.beginPath();
       ctx.moveTo(0, -13);
@@ -1023,13 +988,10 @@ class Player {
       ctx.closePath();
       ctx.fill();
 
-      ctx.restore(); // end torso
+      ctx.restore();
     }
 
-    // ==========================================
-    // POWER-UP AURAS & EFFECTS
-    // ==========================================
-    // 1. Divine Shield Aura
+    // Power-Up Auras
     if (this.game.powerUps.hasShield) {
       const shieldPulse = Math.sin(Date.now() * 0.008) * 4;
       ctx.save();
@@ -1057,7 +1019,6 @@ class Player {
       ctx.restore();
     }
 
-    // 2. Modak Magnet Aura
     if (this.game.powerUps.isMagnetActive) {
       ctx.save();
       ctx.translate(0, -50);
@@ -1073,7 +1034,6 @@ class Player {
       ctx.restore();
     }
 
-    // 3. Bappa Boost Golden Shockwave
     if (this.game.powerUps.isBoostActive) {
       ctx.save();
       ctx.translate(0, -50);
@@ -1111,7 +1071,6 @@ class ObstacleManager {
     const moveDist = this.game.speed * dt;
     this.spawnDistanceCounter += moveDist;
 
-    // Do not spawn obstacles during final Ganesha Destination celebration
     if (this.game.state === 'DESTINATION_CELEBRATION') {
       for (let i = this.obstacles.length - 1; i >= 0; i--) {
         this.obstacles[i].z -= moveDist;
@@ -1120,19 +1079,16 @@ class ObstacleManager {
       return;
     }
 
-    // Check spawner threshold (scales smoothly with speed for human reaction time)
     const currentWaveGap = this.minWaveGap + (this.game.speed - CONFIG.BASE_SPEED) * 0.55;
     if (this.spawnDistanceCounter >= currentWaveGap) {
       this.spawnDistanceCounter = 0;
       this.spawnWave();
     }
 
-    // Update active obstacles
     for (let i = this.obstacles.length - 1; i >= 0; i--) {
       const obs = this.obstacles[i];
       obs.z -= moveDist;
 
-      // Check Near-Miss (when obstacle just passed player plane: z < 0 && z > -40)
       if (!obs.nearMissChecked && obs.z < 0 && obs.z > -40) {
         obs.nearMissChecked = true;
         const laneDiff = Math.abs(this.game.player.currentLaneX - (obs.lane - 1));
@@ -1141,14 +1097,12 @@ class ObstacleManager {
         }
       }
 
-      // Cleanup past camera
       if (obs.z < -60) {
         this.obstacles.splice(i, 1);
       }
     }
   }
 
-  // GUARANTEED FAIRNESS: AT LEAST ONE SAFE LANE ALWAYS FREE
   spawnWave() {
     const obstacleTypes = ['BARRICADE', 'DHOL', 'TORAN', 'CRATES', 'CART'];
     const safeLane = Math.floor(Math.random() * 3);
@@ -1216,7 +1170,6 @@ class ObstacleManager {
     });
   }
 
-  // 1. Festival Barricade (Ground: Jump or switch lane)
   renderBarricade(ctx) {
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
@@ -1227,7 +1180,6 @@ class ObstacleManager {
     ctx.fillRect(-34, -48, 68, 12);
     ctx.fillRect(-34, -28, 68, 10);
 
-    // Decorative Marigold Garland across top
     ctx.fillStyle = '#ffba08';
     for (let g = -30; g <= 30; g += 10) {
       ctx.beginPath();
@@ -1245,7 +1197,6 @@ class ObstacleManager {
     ctx.moveTo(6, -48); ctx.lineTo(14, -48); ctx.lineTo(4, -36); ctx.lineTo(-4, -36); ctx.fill();
   }
 
-  // 2. Large Dhol Drum (Ground: Jump or switch lane)
   renderDhol(ctx) {
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
@@ -1284,7 +1235,6 @@ class ObstacleManager {
     ctx.stroke();
   }
 
-  // 3. Overhead Festival Toran (High: Slide under or switch lane)
   renderToran(ctx) {
     ctx.fillStyle = '#ca8a04';
     ctx.fillRect(-38, -125, 8, 125);
@@ -1323,7 +1273,6 @@ class ObstacleManager {
     ctx.fillText('▼ SLIDE', 0, -77);
   }
 
-  // 4. Flower & Fruit Crates (Ground: Jump or switch lane)
   renderCrates(ctx) {
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
@@ -1348,7 +1297,6 @@ class ObstacleManager {
     ctx.fill();
   }
 
-  // 5. Festival Push Cart (Wide Ground: Switch lane)
   renderCart(ctx) {
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.beginPath();
@@ -1415,13 +1363,11 @@ class CollectibleManager {
       const item = this.items[i];
       item.z -= moveDist;
 
-      // Magnet effect: attract nearby modaks smoothly
       if (isMagnet && item.type === 'MODAK' && item.z < 320 && item.z > -20) {
         const targetLaneX = playerX;
         item.laneX += (targetLaneX - item.laneX) * Math.min(1.0, 10 * dt);
       }
 
-      // Check Collection (when near player plane Z ~ 0)
       if (!item.collected && Math.abs(item.z) < 28) {
         const laneDiff = Math.abs(this.game.player.currentLaneX - item.laneX);
         const playerJump = this.game.player.jumpY;
@@ -1435,7 +1381,6 @@ class CollectibleManager {
         }
       }
 
-      // Cleanup
       if (item.z < -40 || item.collected) {
         this.items.splice(i, 1);
       }
@@ -1785,7 +1730,7 @@ class PowerUpManager {
 }
 
 // ----------------------------------------------------------------------------
-// 9. DETAILED FESTIVAL ENVIRONMENT (Roadside Scenery, Early Ganesha, 4 Phases)
+// 9. DENSE CINEMATIC FESTIVAL ENVIRONMENT (Streets, Pandals, Crowds, Ganesha)
 // ----------------------------------------------------------------------------
 class EnvironmentManager {
   constructor(game) {
@@ -1793,34 +1738,123 @@ class EnvironmentManager {
     this.phase = 1; // 1: Sunset, 2: Evening, 3: Night, 4: Ganesha Destination
     this.fireworks = [];
     this.scenery = [];
+    this.overheadFestoons = [];
 
-    // Initialize recurring roadside festival scenery (both left & right)
-    const types = ['STALL_MODAK', 'STALL_FLOWERS', 'DHOL_GROUP', 'CROWD_CHEER', 'PANDAL_GATE', 'FESTIVAL_BANNER', 'RANGOLI', 'KANDIL_LIGHTS'];
-    let curZ = 40;
-    while (curZ < CONFIG.ROAD_LENGTH + 120) {
-      // Left side decoration
+    // Dense roadside festival scenery generation
+    this.initScenery();
+  }
+
+  initScenery() {
+    this.scenery = [];
+    this.overheadFestoons = [];
+
+    // Overhead festive festoons spanning across street every 85 units
+    for (let z = 50; z < CONFIG.ROAD_LENGTH + 120; z += 85) {
+      this.overheadFestoons.push({ z: z });
+    }
+
+    // Dense multi-tier roadside scenery:
+    // Left & Right sides packed with stalls, pandals, dhol drummers, crowd, banners, lamps
+    const types = [
+      'STALL_MODAK', 'STALL_FLOWERS', 'DHOL_GROUP', 'CROWD_CHEER',
+      'GRAND_PANDAL', 'PANDAL_GATE', 'FESTIVAL_BANNER', 'PEDESTAL_DIYA',
+      'KANDIL_LIGHTS', 'FESTIVE_UMBRELLA'
+    ];
+
+    let curZ = 30;
+    while (curZ < CONFIG.ROAD_LENGTH + 140) {
+      // Curbside Foreground item (closer to road)
+      const curbType = this.getSceneryTypeForDistance(0, 'FOREGROUND');
       this.scenery.push({
         side: 'LEFT',
-        x: -2.1 - Math.random() * 0.3,
+        tier: 'FOREGROUND',
+        x: -1.75 - Math.random() * 0.2,
         z: curZ,
-        type: types[Math.floor(Math.random() * types.length)],
+        type: curbType,
         flip: false
       });
-      // Right side decoration
       this.scenery.push({
         side: 'RIGHT',
-        x: 2.1 + Math.random() * 0.3,
-        z: curZ + 35,
-        type: types[Math.floor(Math.random() * types.length)],
+        tier: 'FOREGROUND',
+        x: 1.75 + Math.random() * 0.2,
+        z: curZ + 20,
+        type: curbType,
         flip: true
       });
-      curZ += 75;
+
+      // Midground Streetfront Shop / Pandal (larger, set slightly back)
+      const midType = this.getSceneryTypeForDistance(0, 'MIDGROUND');
+      this.scenery.push({
+        side: 'LEFT',
+        tier: 'MIDGROUND',
+        x: -2.75 - Math.random() * 0.35,
+        z: curZ + 15,
+        type: midType,
+        flip: false
+      });
+      this.scenery.push({
+        side: 'RIGHT',
+        tier: 'MIDGROUND',
+        x: 2.75 + Math.random() * 0.35,
+        z: curZ + 35,
+        type: midType,
+        flip: true
+      });
+
+      curZ += 48; // Dense 48-unit spacing for a packed festival street!
+    }
+  }
+
+  // Visual Progression scenery type selector
+  getSceneryTypeForDistance(dist, tier) {
+    const pct = Math.min(1.0, dist / CONFIG.DESTINATION_DISTANCE);
+    if (tier === 'FOREGROUND') {
+      if (pct < 0.20) { // 0-20%: Festival Entrance
+        const pool = ['PEDESTAL_DIYA', 'FESTIVAL_BANNER', 'CROWD_CHEER', 'PEDESTAL_DIYA'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      } else if (pct < 0.40) { // 20-40%: Festival Street
+        const pool = ['CROWD_CHEER', 'FESTIVAL_BANNER', 'PEDESTAL_DIYA', 'FESTIVE_UMBRELLA'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      } else if (pct < 0.60) { // 40-60%: Dhol Chowk
+        const pool = ['DHOL_GROUP', 'DHOL_GROUP', 'CROWD_CHEER', 'FESTIVAL_BANNER'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      } else if (pct < 0.80) { // 60-80%: Flower Bazaar
+        const pool = ['PEDESTAL_DIYA', 'CROWD_CHEER', 'FESTIVE_UMBRELLA', 'PEDESTAL_DIYA'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      } else if (pct < 0.95) { // 80-95%: Grand Festival Night
+        const pool = ['PEDESTAL_DIYA', 'CROWD_CHEER', 'DHOL_GROUP', 'PEDESTAL_DIYA'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      } else { // 95-100%: Ganesha Destination
+        const pool = ['PEDESTAL_DIYA', 'PEDESTAL_DIYA', 'CROWD_CHEER', 'FESTIVAL_BANNER'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
+    } else { // MIDGROUND
+      if (pct < 0.20) { // 0-20%: Festival Entrance
+        const pool = ['PANDAL_GATE', 'STALL_MODAK', 'GRAND_PANDAL', 'FESTIVAL_BANNER'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      } else if (pct < 0.40) { // 20-40%: Festival Street
+        const pool = ['STALL_MODAK', 'STALL_MODAK', 'FESTIVE_UMBRELLA', 'KANDIL_LIGHTS', 'GRAND_PANDAL'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      } else if (pct < 0.60) { // 40-60%: Dhol Chowk
+        const pool = ['GRAND_PANDAL', 'DHOL_GROUP', 'DHOL_GROUP', 'PANDAL_GATE', 'KANDIL_LIGHTS'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      } else if (pct < 0.80) { // 60-80%: Flower Bazaar / Grand Pandal Street
+        const pool = ['STALL_FLOWERS', 'STALL_FLOWERS', 'GRAND_PANDAL', 'PANDAL_GATE', 'KANDIL_LIGHTS'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      } else if (pct < 0.95) { // 80-95%: Grand Festival Night
+        const pool = ['GRAND_PANDAL', 'GRAND_PANDAL', 'KANDIL_LIGHTS', 'PANDAL_GATE', 'STALL_FLOWERS'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      } else { // 95-100%: Ganesha Destination
+        const pool = ['GRAND_PANDAL', 'GRAND_PANDAL', 'PANDAL_GATE', 'KANDIL_LIGHTS'];
+        return pool[Math.floor(Math.random() * pool.length)];
+      }
     }
   }
 
   reset() {
     this.phase = 1;
     this.fireworks = [];
+    this.initScenery();
   }
 
   update(dt) {
@@ -1828,30 +1862,61 @@ class EnvironmentManager {
 
     // Progression Phases: Sunset (0-500m) -> Evening (500-1100m) -> Night (1100-1900m) -> Destination (1900m+)
     if (dist < 500) {
-      this.phase = 1; // Festival Entrance / Sunset
+      this.phase = 1;
     } else if (dist < 1100) {
-      this.phase = 2; // Festival Street / Evening
+      this.phase = 2;
     } else if (dist < 1900) {
-      this.phase = 3; // Grand Festival Night
+      this.phase = 3;
     } else {
-      this.phase = 4; // Ganesha Destination
+      this.phase = 4;
     }
 
-    // Scroll Roadside Scenery
+    // Scroll Roadside Scenery with Dynamic Zone Spawning
     const moveDist = this.game.speed * dt;
+    const maxZ = CONFIG.ROAD_LENGTH + 120;
+
     this.scenery.forEach(item => {
       item.z -= moveDist;
       if (item.z < 0) {
-        item.z += CONFIG.ROAD_LENGTH + 80;
+        item.z += maxZ;
+        item.type = this.getSceneryTypeForDistance(this.game.distance, item.tier);
       }
     });
 
-    // Background Fireworks in Phase 3 & 4
-    if (this.phase >= 3 && Math.random() < 0.025) {
+    this.overheadFestoons.forEach(f => {
+      f.z -= moveDist;
+      if (f.z < 0) {
+        f.z += maxZ;
+      }
+    });
+
+    // Special Zone Particles (Dhol Chowk & Flower Bazaar)
+    const pct = Math.min(1.0, dist / CONFIG.DESTINATION_DISTANCE);
+    if (pct >= 0.40 && pct < 0.60 && Math.random() < 0.25) {
+      this.game.particles.spawn(Math.random() * this.game.width, Math.random() * (this.game.height * 0.6), 1, {
+        colors: ['#ff8426', '#ffd152', '#ff4d6d'],
+        shape: 'petal',
+        minSpeed: 1.2,
+        maxSpeed: 2.8,
+        baseVx: 1.5,
+        baseVy: 1.0
+      });
+    } else if (pct >= 0.60 && pct < 0.80 && Math.random() < 0.30) {
+      this.game.particles.spawn(Math.random() * this.game.width, Math.random() * (this.game.height * 0.6), 1, {
+        colors: ['#f43f5e', '#ff8426', '#ffd152', '#fb7185'],
+        shape: 'petal',
+        minSpeed: 1.0,
+        maxSpeed: 2.5,
+        baseVx: 1.4,
+        baseVy: 1.1
+      });
+    }
+
+    // Fireworks in Phase 3 & 4
+    if ((this.phase >= 3 || this.game.state === 'DESTINATION_CELEBRATION') && Math.random() < 0.035) {
       this.spawnFirework();
     }
 
-    // Update fireworks
     for (let f = this.fireworks.length - 1; f >= 0; f--) {
       const fw = this.fireworks[f];
       fw.life -= dt;
@@ -1864,7 +1929,7 @@ class EnvironmentManager {
   spawnFirework() {
     const x = Math.random() * this.game.width;
     const y = Math.random() * (this.game.height * 0.28);
-    const colors = ['#ffd152', '#ff6b1a', '#ff4d6d', '#38bdf8', '#4ade80'];
+    const colors = ['#ffd152', '#ff6b1a', '#ff4d6d', '#38bdf8', '#4ade80', '#c084fc'];
     const chosenColor = colors[Math.floor(Math.random() * colors.length)];
 
     this.fireworks.push({
@@ -1873,7 +1938,7 @@ class EnvironmentManager {
       color: chosenColor,
       life: 1.2,
       maxLife: 1.2,
-      radius: 24 + Math.random() * 32
+      radius: 26 + Math.random() * 36
     });
 
     this.game.particles.spawn(x, y, 22, {
@@ -1884,234 +1949,346 @@ class EnvironmentManager {
     });
   }
 
+  // CINEMATIC FESTIVAL SKY
   renderSky(ctx, width, height) {
     const horizon = this.game.perspective.horizonY;
     const grad = ctx.createLinearGradient(0, 0, 0, horizon);
 
     if (this.phase === 1) {
-      // Phase 1: Sunset Amber
-      grad.addColorStop(0, '#3b1842');
-      grad.addColorStop(0.5, '#9d2f2d');
-      grad.addColorStop(0.85, '#e25c1d');
+      // Sunset: Royal Purple -> Crimson -> Fiery Saffron -> Golden Horizon
+      grad.addColorStop(0, '#230b38');
+      grad.addColorStop(0.35, '#7f1d3d');
+      grad.addColorStop(0.70, '#c2410c');
+      grad.addColorStop(0.92, '#ea580c');
       grad.addColorStop(1, '#ffba08');
     } else if (this.phase === 2) {
-      // Phase 2: Evening Twilight Purple
-      grad.addColorStop(0, '#12142e');
-      grad.addColorStop(0.5, '#2e194a');
-      grad.addColorStop(0.85, '#6a2c5a');
-      grad.addColorStop(1, '#c2543d');
+      // Twilight: Amethyst Violet -> Deep Magenta -> Saffron Twilight
+      grad.addColorStop(0, '#0f1026');
+      grad.addColorStop(0.40, '#2e104d');
+      grad.addColorStop(0.75, '#6b1d52');
+      grad.addColorStop(1, '#b45309');
     } else {
-      // Phase 3 & 4: Deep Navy Night with Stars
-      grad.addColorStop(0, '#050711');
-      grad.addColorStop(0.6, '#0b112c');
-      grad.addColorStop(1, '#1b2554');
+      // Grand Festival Night: Midnight Indigo -> Deep Sapphire with Celestial Glow
+      grad.addColorStop(0, '#03050d');
+      grad.addColorStop(0.45, '#070f2b');
+      grad.addColorStop(0.85, '#101d4a');
+      grad.addColorStop(1, '#1e295d');
     }
 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, horizon + 2);
 
-    // Stars / Celestial Moon or Sun
+    // Sun / Moon with Atmospheric Halo
     if (this.phase === 1) {
-      ctx.fillStyle = 'rgba(255, 230, 150, 0.9)';
-      ctx.shadowColor = '#ff6b1a';
-      ctx.shadowBlur = 40;
+      // Radiant Setting Sun casting volumetric glow
+      const sunX = width * 0.72;
+      const sunY = horizon * 0.65;
+      const sunGlow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 140);
+      sunGlow.addColorStop(0, 'rgba(255, 240, 180, 0.95)');
+      sunGlow.addColorStop(0.35, 'rgba(255, 130, 30, 0.55)');
+      sunGlow.addColorStop(1, 'rgba(255, 100, 20, 0)');
+      ctx.fillStyle = sunGlow;
       ctx.beginPath();
-      ctx.arc(width * 0.72, horizon * 0.65, 36, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = '#fff9e6';
-      ctx.shadowColor = '#ffd152';
-      ctx.shadowBlur = 24;
-      ctx.beginPath();
-      ctx.arc(width * 0.8, horizon * 0.42, 28, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, 140, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-      for (let s = 0; s < 35; s++) {
+      ctx.fillStyle = '#fffbeb';
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 32, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Glowing Full Moon with Luminous Aura
+      const moonX = width * 0.8;
+      const moonY = horizon * 0.42;
+      const moonGlow = ctx.createRadialGradient(moonX, moonY, 15, moonX, moonY, 90);
+      moonGlow.addColorStop(0, 'rgba(255, 245, 210, 0.8)');
+      moonGlow.addColorStop(0.4, 'rgba(255, 209, 82, 0.25)');
+      moonGlow.addColorStop(1, 'rgba(255, 209, 82, 0)');
+      ctx.fillStyle = moonGlow;
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 90, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#fffdf0';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 26, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ambient Twinkling Stars
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      for (let s = 0; s < 45; s++) {
         const sx = (s * 137.5) % width;
-        const sy = (s * 73.1) % (horizon * 0.75);
-        ctx.fillRect(sx, sy, 1.5, 1.5);
+        const sy = (s * 73.1) % (horizon * 0.85);
+        const sz = (s % 3 === 0) ? 2.0 : 1.2;
+        ctx.fillRect(sx, sy, sz, sz);
       }
     }
 
-    // Render Fireworks
+    // Fireworks
     this.fireworks.forEach(fw => {
       const progress = 1 - (fw.life / fw.maxLife);
       ctx.save();
       ctx.strokeStyle = fw.color;
       ctx.globalAlpha = 1 - progress;
       ctx.lineWidth = 2.5;
+      ctx.shadowColor = fw.color;
+      ctx.shadowBlur = 12;
       ctx.beginPath();
       ctx.arc(fw.x, fw.y, fw.radius * progress, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     });
 
-    // Parallax Silhouettes: Temple Spires, Pandal Canopies
+    // Parallax Silhouettes of Temples and City Skyline
     this.renderParallaxSilhouettes(ctx, width, horizon);
 
-    // Early Visible Ganesha Destination on the Horizon!
+    // EARLY VISIBLE GANESHA DESTINATION ON HORIZON
     this.renderHorizonGaneshaDestination(ctx, width, horizon);
   }
 
   renderParallaxSilhouettes(ctx, width, horizon) {
     const scrollOffset = (this.game.distance * 0.15) % 400;
 
-    ctx.fillStyle = this.phase === 1 ? '#4a1525' : '#070916';
+    ctx.fillStyle = this.phase === 1 ? '#451228' : '#050816';
     ctx.beginPath();
     ctx.moveTo(0, horizon);
 
     for (let x = -scrollOffset; x < width + 400; x += 120) {
       ctx.lineTo(x, horizon);
       ctx.lineTo(x + 20, horizon - 28);
-      ctx.lineTo(x + 35, horizon - 58);
+      ctx.lineTo(x + 35, horizon - 62);
       ctx.lineTo(x + 50, horizon - 28);
-      ctx.lineTo(x + 70, horizon - 16);
-      ctx.lineTo(x + 100, horizon);
+      ctx.lineTo(x + 75, horizon - 18);
+      ctx.lineTo(x + 105, horizon);
     }
     ctx.lineTo(width, horizon);
     ctx.closePath();
     ctx.fill();
 
+    // Saffron Festival Flags on spires
     ctx.fillStyle = '#ff6b1a';
     for (let x = -scrollOffset; x < width + 400; x += 120) {
       ctx.beginPath();
-      ctx.moveTo(x + 35, horizon - 58);
-      ctx.lineTo(x + 48, horizon - 52);
-      ctx.lineTo(x + 35, horizon - 46);
+      ctx.moveTo(x + 35, horizon - 62);
+      ctx.lineTo(x + 48, horizon - 56);
+      ctx.lineTo(x + 35, horizon - 50);
       ctx.closePath();
       ctx.fill();
     }
   }
 
-  // EARLY VISIBLE GANESHA DESTINATION (Grows larger as distance approaches 2400m)
+  // MAGNIFICENT GANESHA DESTINATION ON THE HORIZON
   renderHorizonGaneshaDestination(ctx, width, horizon) {
     const dist = this.game.distance;
     const progress = Math.min(1.0, dist / CONFIG.DESTINATION_DISTANCE);
     const centerX = width * 0.5;
 
-    // Scale from small distant golden halo to giant grand destination pandal
-    const scale = 0.22 + progress * 0.95;
-    const ganeshaY = horizon - 20 * scale;
+    // Scales from distant sacred beacon to colossal glowing temple sanctum
+    const scale = 0.25 + Math.pow(progress, 1.4) * 1.35;
+    const ganeshaY = horizon - 28 * scale;
 
     ctx.save();
     ctx.translate(centerX, ganeshaY);
     ctx.scale(scale, scale);
 
-    // Radiant Golden Halo (Prabhavali)
-    const pulse = Math.sin(Date.now() * 0.005) * 6;
-    ctx.shadowColor = '#ffd152';
-    ctx.shadowBlur = 20 + progress * 25 + pulse;
+    // Divine Golden Halo (Prabhavali) with Rotating Rays
+    const pulse = Math.sin(Date.now() * 0.005) * 8;
+    const haloRadius = 60 + pulse;
 
-    ctx.strokeStyle = 'rgba(255, 209, 82, 0.85)';
-    ctx.lineWidth = 3;
+    const haloGlow = ctx.createRadialGradient(0, -60, 20, 0, -60, haloRadius * 1.8);
+    haloGlow.addColorStop(0, 'rgba(255, 230, 120, 0.95)');
+    haloGlow.addColorStop(0.4, 'rgba(255, 140, 20, 0.5)');
+    haloGlow.addColorStop(1, 'rgba(255, 100, 10, 0)');
+    ctx.fillStyle = haloGlow;
     ctx.beginPath();
-    ctx.arc(0, -50, 48 + pulse, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = 'rgba(255, 209, 82, 0.18)';
+    ctx.arc(0, -60, haloRadius * 1.8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Grand Pandal Arch Structure
-    if (dist > 450) {
-      ctx.fillStyle = '#991b1b'; // Deep festive crimson
+    // Sacred Prabhavali Sunburst Rays
+    ctx.strokeStyle = 'rgba(255, 209, 82, 0.75)';
+    ctx.lineWidth = 2.5;
+    const rayRot = Date.now() * 0.001;
+    for (let r = 0; r < 16; r++) {
+      const angle = (r * Math.PI) / 8 + rayRot;
       ctx.beginPath();
-      ctx.moveTo(-75, 20);
-      ctx.lineTo(-65, -90);
-      ctx.lineTo(0, -135); // Grand Shikhara pinnacle
-      ctx.lineTo(65, -90);
-      ctx.lineTo(75, 20);
-      ctx.closePath();
-      ctx.fill();
-
-      // Golden kalash spire atop pandal
-      ctx.fillStyle = '#ffd152';
-      ctx.beginPath();
-      ctx.arc(0, -138, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillRect(-2, -152, 4, 14);
+      ctx.moveTo(Math.cos(angle) * (haloRadius * 0.7), -60 + Math.sin(angle) * (haloRadius * 0.7));
+      ctx.lineTo(Math.cos(angle) * (haloRadius * 1.3), -60 + Math.sin(angle) * (haloRadius * 1.3));
+      ctx.stroke();
     }
 
-    // Stylized Lord Ganesha Silhouette / Idol
-    ctx.fillStyle = '#ffd152';
-
-    // Crown (Mukut)
+    // Grand Multi-Tier Temple Pandal Architecture
+    ctx.fillStyle = '#7f1d1d'; // Crimson temple base
     ctx.beginPath();
-    ctx.moveTo(-16, -72);
-    ctx.lineTo(0, -100);
-    ctx.lineTo(16, -72);
+    ctx.moveTo(-110, 25);
+    ctx.lineTo(-90, -110);
+    ctx.lineTo(0, -165); // Towering Shikhara pinnacle
+    ctx.lineTo(90, -110);
+    ctx.lineTo(110, 25);
     ctx.closePath();
     ctx.fill();
 
-    // Head & Large Ears
-    ctx.beginPath();
-    ctx.arc(0, -60, 20, 0, Math.PI * 2);
-    ctx.arc(-26, -60, 14, 0, Math.PI * 2); // Left ear
-    ctx.arc(26, -60, 14, 0, Math.PI * 2);  // Right ear
-    ctx.fill();
-
-    // Curved Trunk
-    ctx.strokeStyle = '#ffd152';
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.moveTo(0, -52);
-    ctx.quadraticCurveTo(8, -32, -6, -24);
-    ctx.stroke();
-
-    // Modak sweet on trunk tip
-    ctx.fillStyle = '#fff7eb';
-    ctx.beginPath();
-    ctx.arc(-7, -24, 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Body (Seated in divine blessing)
-    ctx.fillStyle = '#ff8426';
-    ctx.beginPath();
-    ctx.ellipse(0, -15, 32, 24, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Blessing Right Hand (Abhaya Mudra)
+    // Golden Kalash Finials & Temple Spire
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
-    ctx.arc(-28, -22, 7, 0, Math.PI * 2);
+    ctx.arc(0, -168, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(-3, -185, 6, 18);
+
+    // Carved Golden Pandal Columns
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-95, -100, 12, 125);
+    ctx.fillRect(83, -100, 12, 125);
+
+    // Ornate Royal Canopy Fabric
+    ctx.fillStyle = '#d97706';
+    ctx.beginPath();
+    ctx.moveTo(-95, -95);
+    ctx.quadraticCurveTo(0, -125, 95, -95);
+    ctx.lineTo(90, -85);
+    ctx.quadraticCurveTo(0, -115, -90, -85);
+    ctx.closePath();
+    ctx.fill();
+
+    // ========================================
+    // MAJESTIC LORD GANESHA IDOL
+    // ========================================
+    // 1. Royal Golden Mukut (Jeweled Crown)
+    ctx.fillStyle = '#ffd152';
+    ctx.beginPath();
+    ctx.moveTo(-22, -88);
+    ctx.lineTo(0, -125);
+    ctx.lineTo(22, -88);
+    ctx.closePath();
+    ctx.fill();
+
+    // Ruby on Crown
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(0, -102, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Head & Large Fan-Like Ears
+    ctx.fillStyle = '#ffd152';
+    ctx.beginPath();
+    ctx.arc(0, -70, 25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Left & Right Ears with Kundal Ornaments
+    ctx.beginPath();
+    ctx.arc(-34, -70, 18, 0, Math.PI * 2);
+    ctx.arc(34, -70, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(-42, -62, 5, 0, Math.PI * 2);
+    ctx.arc(42, -62, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3. Sacred Chandan Tilak & Trinetra on Forehead
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(-2, -82, 4, 10);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-6, -78, 12, 2.5);
+
+    // 4. Curved Elephant Trunk holding Golden Modak
+    ctx.strokeStyle = '#ffd152';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, -62);
+    ctx.quadraticCurveTo(12, -38, -10, -28);
+    ctx.stroke();
+
+    // Giant Glowing Modak on Trunk
+    ctx.fillStyle = '#fff7eb';
+    ctx.shadowColor = '#ffd152';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(-12, -28, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // 5. Divine Seated Body in Saffron Pitambar
+    ctx.fillStyle = '#ea580c';
+    ctx.beginPath();
+    ctx.ellipse(0, -15, 42, 30, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Marigold Varmala Garland draped on chest
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(0, -32, 24, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+
+    // 6. Blessing Hand (Abhaya Mudra) radiating light
+    ctx.fillStyle = '#ffd152';
+    ctx.beginPath();
+    ctx.arc(-36, -24, 10, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
   }
 
-  // Perspective Road, Curbs, Lights & Rich Procedural Roadside Scenery
+  // PERSPECTIVE ROAD, SIDEWALKS, CURBS & RICH SCENERY
   renderRoad(ctx) {
     const persp = this.game.perspective;
     const width = persp.width;
     const horizon = persp.horizonY;
     const groundBase = persp.groundBaseY;
 
-    // Ground surrounding road
-    ctx.fillStyle = this.phase === 4 ? '#0e1a34' : '#141728';
-    ctx.fillRect(0, horizon, width, persp.height - horizon);
-
-    // 3D Road Trapezoid
-    const pFarLeft = persp.project(-1.5, 0, CONFIG.ROAD_LENGTH);
-    const pFarRight = persp.project(1.5, 0, CONFIG.ROAD_LENGTH);
-    const pNearLeft = persp.project(-1.5, 0, 0);
-    const pNearRight = persp.project(1.5, 0, 0);
+    // 1. Sidewalk Stone Pavements extending beyond the road
+    const pFarLeftWalk = persp.project(-3.6, 0, CONFIG.ROAD_LENGTH);
+    const pFarRightWalk = persp.project(3.6, 0, CONFIG.ROAD_LENGTH);
+    const pNearLeftWalk = persp.project(-3.6, 0, 0);
+    const pNearRightWalk = persp.project(3.6, 0, 0);
 
     ctx.save();
-    const roadGrad = ctx.createLinearGradient(0, horizon, 0, groundBase);
-    roadGrad.addColorStop(0, '#1c1f33');
-    roadGrad.addColorStop(1, '#2a2d48');
-    ctx.fillStyle = roadGrad;
 
+    // Stone Sidewalk Pavement Base
+    const walkGrad = ctx.createLinearGradient(0, horizon, 0, groundBase);
+    walkGrad.addColorStop(0, '#151726');
+    walkGrad.addColorStop(1, '#252136');
+    ctx.fillStyle = walkGrad;
+
+    // Left Sidewalk
     ctx.beginPath();
-    ctx.moveTo(pFarLeft.x, pFarLeft.y);
-    ctx.lineTo(pFarRight.x, pFarRight.y);
-    ctx.lineTo(pNearRight.x, pNearRight.y);
-    ctx.lineTo(pNearLeft.x, pNearLeft.y);
+    ctx.moveTo(pFarLeftWalk.x, pFarLeftWalk.y);
+    const pFarRoadL = persp.project(-1.5, 0, CONFIG.ROAD_LENGTH);
+    ctx.lineTo(pFarRoadL.x, pFarRoadL.y);
+    const pNearRoadL = persp.project(-1.5, 0, 0);
+    ctx.lineTo(pNearRoadL.x, pNearRoadL.y);
+    ctx.lineTo(pNearLeftWalk.x, pNearLeftWalk.y);
     ctx.closePath();
     ctx.fill();
 
-    // Alternating Festival Curbs
+    // Right Sidewalk
+    ctx.beginPath();
+    const pFarRoadR = persp.project(1.5, 0, CONFIG.ROAD_LENGTH);
+    ctx.moveTo(pFarRoadR.x, pFarRoadR.y);
+    ctx.lineTo(pFarRightWalk.x, pFarRightWalk.y);
+    ctx.lineTo(pNearRightWalk.x, pNearRightWalk.y);
+    const pNearRoadR = persp.project(1.5, 0, 0);
+    ctx.lineTo(pNearRoadR.x, pNearRoadR.y);
+    ctx.closePath();
+    ctx.fill();
+
+    // 2. Asphalt Road Surface with Warm Golden Ambient Reflections
+    const roadGrad = ctx.createLinearGradient(0, horizon, 0, groundBase);
+    roadGrad.addColorStop(0, '#181b2e');
+    roadGrad.addColorStop(0.5, '#23253b');
+    roadGrad.addColorStop(1, '#2c2e47');
+    ctx.fillStyle = roadGrad;
+
+    ctx.beginPath();
+    ctx.moveTo(pFarRoadL.x, pFarRoadL.y);
+    ctx.lineTo(pFarRoadR.x, pFarRoadR.y);
+    ctx.lineTo(pNearRoadR.x, pNearRoadR.y);
+    ctx.lineTo(pNearRoadL.x, pNearRoadL.y);
+    ctx.closePath();
+    ctx.fill();
+
+    // 3. Glowing Illuminated Curbs with Alternating Saffron & Gold Segments
     const segments = 24;
     const speedOffset = (this.game.distance * 1.8) % 100;
 
@@ -2127,28 +2304,99 @@ class EnvironmentManager {
       const isAlt = (s + Math.floor(speedOffset * 0.1)) % 2 === 0;
       ctx.fillStyle = isAlt ? '#ff6b1a' : '#ffd152';
 
-      // Left Curb
+      // Left Illuminated Curb
       ctx.beginPath();
       ctx.moveTo(pL1.x, pL1.y);
       ctx.lineTo(pL2.x, pL2.y);
-      ctx.lineTo(pL2.x - 8 * pL2.scale, pL2.y);
-      ctx.lineTo(pL1.x - 8 * pL1.scale, pL1.y);
+      ctx.lineTo(pL2.x - 9 * pL2.scale, pL2.y);
+      ctx.lineTo(pL1.x - 9 * pL1.scale, pL1.y);
       ctx.closePath();
       ctx.fill();
 
-      // Right Curb
+      // Right Illuminated Curb
       ctx.beginPath();
       ctx.moveTo(pR1.x, pR1.y);
       ctx.lineTo(pR2.x, pR2.y);
-      ctx.lineTo(pR2.x + 8 * pR2.scale, pR2.y);
-      ctx.lineTo(pR1.x + 8 * pR1.scale, pR1.y);
+      ctx.lineTo(pR2.x + 9 * pR2.scale, pR2.y);
+      ctx.lineTo(pR1.x + 9 * pR1.scale, pR1.y);
       ctx.closePath();
       ctx.fill();
+
+      // Curb Flower Petal Sprinkles & Side Diyas
+      if (s % 3 === 0 && pL1.scale > 0.08) {
+        ctx.fillStyle = '#ff8426';
+        ctx.beginPath();
+        ctx.arc(pL1.x + 4 * pL1.scale, pL1.y - 2 * pL1.scale, 2.5 * pL1.scale, 0, Math.PI * 2);
+        ctx.arc(pR1.x - 4 * pR1.scale, pR1.y - 2 * pR1.scale, 2.5 * pR1.scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Small glowing clay diyas placed along curbs
+      if (s % 4 === 1 && pL1.scale > 0.1) {
+        // Left diya
+        ctx.fillStyle = '#b45309';
+        ctx.beginPath();
+        ctx.ellipse(pL1.x - 5 * pL1.scale, pL1.y - 2 * pL1.scale, 5 * pL1.scale, 2.5 * pL1.scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffd152';
+        ctx.beginPath();
+        ctx.arc(pL1.x - 5 * pL1.scale, pL1.y - 5 * pL1.scale, 2 * pL1.scale, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Right diya
+        ctx.fillStyle = '#b45309';
+        ctx.beginPath();
+        ctx.ellipse(pR1.x + 5 * pR1.scale, pR1.y - 2 * pR1.scale, 5 * pR1.scale, 2.5 * pR1.scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffd152';
+        ctx.beginPath();
+        ctx.arc(pR1.x + 5 * pR1.scale, pR1.y - 5 * pR1.scale, 2 * pR1.scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Sacred Rangoli / Kolam Mandalas on Sidewalk Pavements
+      if (s % 6 === 2 && pL1.scale > 0.12) {
+        const rScale = pL1.scale;
+        const rangoliRadius = 14 * rScale;
+
+        // Left Sidewalk Rangoli
+        const rangoliLX = pL1.x - 18 * rScale;
+        const rangoliLY = pL1.y;
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.beginPath();
+        ctx.arc(rangoliLX, rangoliLY, rangoliRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 107, 26, 0.6)';
+        ctx.beginPath();
+        ctx.arc(rangoliLX, rangoliLY, rangoliRadius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 209, 82, 0.8)';
+        ctx.beginPath();
+        ctx.arc(rangoliLX, rangoliLY, rangoliRadius * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Right Sidewalk Rangoli
+        const rangoliRX = pR1.x + 18 * rScale;
+        const rangoliRY = pR1.y;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.beginPath();
+        ctx.arc(rangoliRX, rangoliRY, rangoliRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 107, 26, 0.6)';
+        ctx.beginPath();
+        ctx.arc(rangoliRX, rangoliRY, rangoliRadius * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255, 209, 82, 0.8)';
+        ctx.beginPath();
+        ctx.arc(rangoliRX, rangoliRY, rangoliRadius * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
-    // Moving Lane Dividers
+    // 4. Moving Lane Dividers with Warm Golden Rim
     ctx.strokeStyle = '#fff7eb';
-    ctx.lineWidth = 3;
     const dashLength = 50;
     const dashGap = 50;
     const dashScroll = (this.game.distance * 3) % (dashLength + dashGap);
@@ -2160,7 +2408,7 @@ class EnvironmentManager {
 
       const pDiv1Start = persp.project(-0.5, 0, zStart);
       const pDiv1End = persp.project(-0.5, 0, zEnd);
-      ctx.lineWidth = Math.max(1, 3.5 * pDiv1Start.scale);
+      ctx.lineWidth = Math.max(1, 4.0 * pDiv1Start.scale);
       ctx.beginPath();
       ctx.moveTo(pDiv1Start.x, pDiv1Start.y);
       ctx.lineTo(pDiv1End.x, pDiv1End.y);
@@ -2174,13 +2422,78 @@ class EnvironmentManager {
       ctx.stroke();
     }
 
-    // RENDER RICH PROCEDURAL ROADSIDE SCENERY (Sorted back-to-front)
+    // 5. Render Overhead Light Festoons Spanning across the Road
+    this.renderOverheadFestoons(ctx);
+
+    // 6. Render Dense Roadside Scenery (Sorted Back-to-Front)
     this.renderRoadsideScenery(ctx);
 
     ctx.restore();
   }
 
-  // RENDER PROCEDURAL ROADSIDE SCENERY (Stalls, Dhol Players, Crowds, Banners, Rangoli, Kandils)
+  // OVERHEAD FESTIVE LIGHT FESTOONS (Connecting left and right sides)
+  renderOverheadFestoons(ctx) {
+    const persp = this.game.perspective;
+    const sorted = [...this.overheadFestoons].sort((a, b) => b.z - a.z);
+
+    sorted.forEach(f => {
+      const pL = persp.project(-1.75, 75, f.z);
+      const pR = persp.project(1.75, 75, f.z);
+      const pMid = persp.project(0, 55, f.z);
+      const scale = pMid.scale;
+      if (scale <= 0.05) return;
+
+      ctx.save();
+      // Sagging Catenary Garland string
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = Math.max(1.5, 3 * scale);
+      ctx.beginPath();
+      ctx.moveTo(pL.x, pL.y);
+      ctx.quadraticCurveTo(pMid.x, pMid.y, pR.x, pR.y);
+      ctx.stroke();
+
+      // Hanging Marigold Beads & Fairy Lights
+      const lightCount = 7;
+      for (let i = 1; i < lightCount; i++) {
+        const t = i / lightCount;
+        const lx = (1 - t) * (1 - t) * pL.x + 2 * (1 - t) * t * pMid.x + t * t * pR.x;
+        const ly = (1 - t) * (1 - t) * pL.y + 2 * (1 - t) * t * pMid.y + t * t * pR.y;
+
+        // Glowing Fairy Light dot
+        const color = (i % 2 === 0) ? '#ffd152' : '#ff6b1a';
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(lx, ly, Math.max(1.5, 4 * scale), 0, Math.PI * 2);
+        ctx.fill();
+
+        // Hanging Mango leaf / flower tassel
+        if (scale > 0.12 && i % 2 === 1) {
+          ctx.fillStyle = '#15803d';
+          ctx.beginPath();
+          ctx.moveTo(lx, ly);
+          ctx.lineTo(lx + 2 * scale, ly + 8 * scale);
+          ctx.lineTo(lx - 2 * scale, ly + 8 * scale);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      // Center Star Kandil hanging overhead
+      if (scale > 0.14) {
+        ctx.fillStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.moveTo(pMid.x, pMid.y + 2 * scale);
+        ctx.lineTo(pMid.x + 6 * scale, pMid.y + 10 * scale);
+        ctx.lineTo(pMid.x, pMid.y + 18 * scale);
+        ctx.lineTo(pMid.x - 6 * scale, pMid.y + 10 * scale);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+  }
+
+  // DENSE ROADSIDE SCENERY RENDERER
   renderRoadsideScenery(ctx) {
     const persp = this.game.perspective;
     const sorted = [...this.scenery].sort((a, b) => b.z - a.z);
@@ -2207,282 +2520,393 @@ class EnvironmentManager {
         case 'CROWD_CHEER':
           this.renderCrowdCheer(ctx);
           break;
+        case 'GRAND_PANDAL':
+          this.renderGrandPandal(ctx);
+          break;
         case 'PANDAL_GATE':
           this.renderPandalGate(ctx);
           break;
         case 'FESTIVAL_BANNER':
           this.renderFestivalBanner(ctx);
           break;
-        case 'RANGOLI':
-          this.renderRangoli(ctx);
+        case 'PEDESTAL_DIYA':
+          this.renderPedestalDiya(ctx);
           break;
         case 'KANDIL_LIGHTS':
           this.renderKandilLights(ctx);
+          break;
+        case 'FESTIVE_UMBRELLA':
+          this.renderFestiveUmbrella(ctx);
           break;
       }
       ctx.restore();
     });
   }
 
-  // 1. Modak Sweet Stall
+  // 1. Large Decorated Modak & Mithai Shop
   renderModakStall(ctx) {
-    // Counter
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(-35, -34, 70, 34);
+    // Warm Interior Glow
+    ctx.fillStyle = 'rgba(255, 209, 82, 0.25)';
+    ctx.fillRect(-55, -80, 110, 80);
 
-    // Striped Canopy
+    // Carved Wooden Counter
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-50, -45, 100, 45);
+
+    // Striped Saffron & Gold Awning Canopy
     ctx.fillStyle = '#ff8426';
     ctx.beginPath();
-    ctx.moveTo(-42, -58);
-    ctx.lineTo(0, -74);
-    ctx.lineTo(42, -58);
-    ctx.lineTo(40, -48);
-    ctx.lineTo(-40, -48);
+    ctx.moveTo(-60, -82);
+    ctx.lineTo(0, -108);
+    ctx.lineTo(60, -82);
+    ctx.lineTo(55, -68);
+    ctx.lineTo(-55, -68);
     ctx.closePath();
     ctx.fill();
 
-    // Yellow stripes
+    // Yellow Awning Stripes
     ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-22, -62, 10, 14);
-    ctx.fillRect(12, -62, 10, 14);
+    ctx.fillRect(-35, -88, 14, 20);
+    ctx.fillRect(18, -88, 14, 20);
 
-    // Bamboo pillars
-    ctx.fillStyle = '#d97706';
-    ctx.fillRect(-38, -58, 5, 58);
-    ctx.fillRect(33, -58, 5, 58);
+    // Bamboo Frame Posts
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(-56, -82, 6, 82);
+    ctx.fillRect(50, -82, 6, 82);
 
-    // Modak platters on counter
-    ctx.fillStyle = '#fff7eb';
-    ctx.beginPath();
-    ctx.arc(-16, -38, 8, 0, Math.PI * 2);
-    ctx.arc(0, -40, 9, 0, Math.PI * 2);
-    ctx.arc(16, -38, 8, 0, Math.PI * 2);
-    ctx.fill();
+    // Hanging Marigold Garlands on Awning
+    ctx.fillStyle = '#ffba08';
+    for (let x = -50; x <= 50; x += 12) {
+      ctx.beginPath();
+      ctx.arc(x, -68, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-    // Diya lamp
+    // Tiered Brass Platters piled with Modaks
+    ctx.fillStyle = '#ffd152'; // Brass thali
+    ctx.fillRect(-42, -50, 84, 5);
+
+    ctx.fillStyle = '#fff7eb'; // Modaks
+    for (let m = -34; m <= 34; m += 14) {
+      ctx.beginPath();
+      ctx.moveTo(m, -62);
+      ctx.bezierCurveTo(m + 5, -56, m + 6, -50, m, -50);
+      ctx.bezierCurveTo(m - 6, -50, m - 5, -56, m, -62);
+      ctx.fill();
+    }
+
+    // Glowing Signboard: "मोदक भंडार"
+    ctx.fillStyle = '#d62828';
+    ctx.fillRect(-32, -36, 64, 16);
     ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(0, -48, 4, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('मोदक 🍬', 0, -24);
   }
 
-  // 2. Flower Bazaar Stall
+  // 2. Large Flower Bazaar Stall
   renderFlowerStall(ctx) {
-    // Bamboo stall frame
-    ctx.fillStyle = '#ca8a04';
-    ctx.fillRect(-32, -60, 4, 60);
-    ctx.fillRect(28, -60, 4, 60);
-    ctx.fillRect(-36, -62, 68, 6);
+    // Bamboo Stall Frame
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(-48, -90, 6, 90);
+    ctx.fillRect(42, -90, 6, 90);
+    ctx.fillRect(-52, -92, 104, 8);
 
-    // Hanging Marigold Garlands
-    for (let g = -28; g <= 28; g += 8) {
-      const isYellow = (g % 16 === 0);
+    // Cascading Marigold Curtains (Hundreds of flowers in dense rows)
+    for (let col = -42; col <= 42; col += 10) {
+      const isYellow = (col % 20 === 0);
       ctx.fillStyle = isYellow ? '#ffd152' : '#ff8426';
-      for (let y = -54; y <= -18; y += 7) {
+      for (let row = -84; row <= -22; row += 9) {
         ctx.beginPath();
-        ctx.arc(g, y, 3.5, 0, Math.PI * 2);
+        ctx.arc(col, row, 4.5, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    // Flower basket at base
-    ctx.fillStyle = '#b45309';
+    // Rose Petal Basket Counter
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-44, -22, 88, 22);
+
+    ctx.fillStyle = '#dc2626'; // Deep Red Rose heaps
     ctx.beginPath();
-    ctx.ellipse(0, -6, 26, 8, 0, 0, Math.PI * 2);
+    ctx.arc(-22, -22, 14, Math.PI, Math.PI * 2);
+    ctx.arc(22, -22, 14, Math.PI, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#d62828'; // Rose petals
+
+    // Hanging Floral Chandelier
+    ctx.fillStyle = '#ffd152';
     ctx.beginPath();
-    ctx.arc(0, -10, 14, Math.PI, Math.PI * 2);
+    ctx.arc(0, -96, 6, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // 3. Dhol-Tasha Drummers (Animated swinging arms in rhythm)
+  // 3. Dhol-Tasha Drum Group (Animated arms swinging drumsticks!)
   renderDholGroup(ctx) {
     const beatPhase = Math.sin(Date.now() * 0.015);
 
-    for (let d = -18; d <= 18; d += 36) {
+    for (let i = 0; i < 2; i++) {
+      const dx = (i === 0) ? -20 : 20;
+
       // Drummer Body
       ctx.fillStyle = '#ff6b1a'; // Saffron kurta
-      ctx.fillRect(d - 7, -42, 14, 28);
+      ctx.fillRect(dx - 10, -56, 20, 36);
 
-      // White dhoti
+      // White silk dhoti
       ctx.fillStyle = '#fff7eb';
-      ctx.fillRect(d - 8, -14, 16, 14);
+      ctx.fillRect(dx - 11, -20, 22, 20);
 
-      // Head & Red Turban
+      // Head & Red Kolhapuri Pagdi
       ctx.fillStyle = '#e0a876';
       ctx.beginPath();
-      ctx.arc(d, -50, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#d62828';
-      ctx.beginPath();
-      ctx.arc(d, -54, 8, Math.PI, Math.PI * 2);
+      ctx.arc(dx, -66, 9, 0, Math.PI * 2);
       ctx.fill();
 
-      // Dhol Drum slung on shoulder
-      ctx.fillStyle = '#854d0e';
+      ctx.fillStyle = '#dc2626';
       ctx.beginPath();
-      ctx.ellipse(d, -28, 14, 9, 0, 0, Math.PI * 2);
+      ctx.arc(dx, -72, 10, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffd152'; // Gold kalgi
+      ctx.fillRect(dx - 2, -80, 4, 8);
+
+      // Dhol Drum slung across chest
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.ellipse(dx, -36, 18, 12, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Drumsticks beating in rhythm!
       ctx.strokeStyle = '#ffd152';
       ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Drumsticks beating dynamically in rhythm
+      ctx.strokeStyle = '#ffd152';
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(d - 8, -38);
-      ctx.lineTo(d - 2, -28 + beatPhase * 6);
-      ctx.moveTo(d + 8, -38);
-      ctx.lineTo(d + 2, -28 - beatPhase * 6);
+      ctx.moveTo(dx - 10, -48);
+      ctx.lineTo(dx - 3, -36 + beatPhase * 8);
+      ctx.moveTo(dx + 10, -48);
+      ctx.lineTo(dx + 3, -36 - beatPhase * 8);
       ctx.stroke();
     }
   }
 
-  // 4. Cheering Crowd with Saffron Flags
+  // 4. Cheering Crowd of Festival Devotees
   renderCrowdCheer(ctx) {
-    const flagWave = Math.sin(Date.now() * 0.008) * 8;
+    const flagWave = Math.sin(Date.now() * 0.008) * 10;
 
-    for (let c = -24; c <= 24; c += 16) {
-      // Silhouette Body
+    // Crowd Silhouettes
+    for (let c = -30; c <= 30; c += 15) {
       ctx.fillStyle = '#1e293b';
       ctx.beginPath();
-      ctx.ellipse(c, -18, 7, 18, 0, 0, Math.PI * 2);
+      ctx.ellipse(c, -22, 9, 22, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Head
       ctx.beginPath();
-      ctx.arc(c, -38, 5, 0, Math.PI * 2);
+      ctx.arc(c, -48, 6.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // Raised Cheering Arms
+      // Raised cheering arms
       ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(c - 4, -28);
-      ctx.lineTo(c - 8, -46);
+      ctx.moveTo(c - 5, -34);
+      ctx.lineTo(c - 10, -56);
+      ctx.moveTo(c + 5, -34);
+      ctx.lineTo(c + 10, -56);
       ctx.stroke();
     }
 
-    // Saffron Festival Flag held high
+    // Sacred Saffron Flag held high
     ctx.strokeStyle = '#92400e';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.beginPath();
-    ctx.moveTo(0, -8);
-    ctx.lineTo(0, -68);
+    ctx.moveTo(0, -10);
+    ctx.lineTo(0, -86);
     ctx.stroke();
 
     ctx.fillStyle = '#ff6b1a';
     ctx.beginPath();
-    ctx.moveTo(0, -68);
-    ctx.lineTo(24 + flagWave, -58);
-    ctx.lineTo(0, -48);
+    ctx.moveTo(0, -86);
+    ctx.lineTo(32 + flagWave, -74);
+    ctx.lineTo(0, -62);
     ctx.closePath();
     ctx.fill();
   }
 
-  // 5. Ornate Pandal Gate Column
-  renderPandalGate(ctx) {
-    // Carved Column
-    ctx.fillStyle = '#d97706';
-    ctx.fillRect(-10, -78, 20, 78);
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-14, -84, 28, 8);
-    ctx.fillRect(-14, -8, 28, 8);
+  // 5. Grand Illuminated Festival Pandal (Towering structure)
+  renderGrandPandal(ctx) {
+    // Multi-tier Pandal Walls & Roof
+    ctx.fillStyle = '#7f1d1d';
+    ctx.fillRect(-65, -120, 130, 120);
 
-    // Green Banana Stem at base with coconuts
-    ctx.fillStyle = '#15803d';
-    ctx.fillRect(-16, -50, 8, 50);
-    ctx.fillStyle = '#ea580c';
+    // Ornate Golden Temple Arch
+    ctx.strokeStyle = '#ffd152';
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.arc(-12, -48, 5, 0, Math.PI * 2);
+    ctx.arc(0, -80, 42, Math.PI, Math.PI * 2);
+    ctx.stroke();
+
+    // Tiered Crimson & Gold Shikhara Roof
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.moveTo(-75, -120);
+    ctx.lineTo(0, -165);
+    ctx.lineTo(75, -120);
+    ctx.closePath();
     ctx.fill();
 
-    // Diya lamp atop pillar
+    // Golden Kalash Finial
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
-    ctx.arc(0, -90, 5, 0, Math.PI * 2);
+    ctx.arc(0, -170, 8, 0, Math.PI * 2);
     ctx.fill();
-  }
 
-  // 6. Festival Banner
-  renderFestivalBanner(ctx) {
-    // Wooden poles
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(-28, -65, 4, 65);
-    ctx.fillRect(24, -65, 4, 65);
-
-    // Banner Fabric
-    ctx.fillStyle = '#d62828';
-    ctx.fillRect(-26, -60, 52, 28);
-
-    // Gold Tassels
-    ctx.fillStyle = '#ffd152';
-    for (let t = -24; t <= 24; t += 8) {
-      ctx.fillRect(t, -32, 4, 6);
+    // Illuminated Fairy Lights along roofline
+    const dots = 9;
+    for (let d = 0; d < dots; d++) {
+      const tx = -68 + (d * 17);
+      const ty = -120 - Math.sin((d / (dots - 1)) * Math.PI) * 40;
+      ctx.fillStyle = (d % 2 === 0) ? '#ffd152' : '#ff6b1a';
+      ctx.beginPath();
+      ctx.arc(tx, ty, 3.5, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    // Sacred Om symbol
+    // Large Ganesha Emblem in Pandal Arch
     ctx.fillStyle = '#ffd152';
+    ctx.beginPath();
+    ctx.arc(0, -78, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#7f1d1d';
     ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('ॐ', 0, -46);
+    ctx.fillText('ॐ', 0, -78);
   }
 
-  // 7. Rangoli Artwork on pavement
-  renderRangoli(ctx) {
-    ctx.save();
-    ctx.scale(1, 0.4); // Flattened on ground
-    // Concentric sacred floral rangoli circles
-    ctx.fillStyle = '#ffffff';
+  // 6. Pandal Gate Column with Banana Stems
+  renderPandalGate(ctx) {
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(-12, -90, 24, 90);
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-16, -96, 32, 8);
+    ctx.fillRect(-16, -8, 32, 8);
+
+    // Green Banana Stem at base with Coconuts
+    ctx.fillStyle = '#15803d';
+    ctx.fillRect(-18, -60, 10, 60);
+    ctx.fillStyle = '#ea580c';
     ctx.beginPath();
-    ctx.arc(0, 0, 24, 0, Math.PI * 2);
+    ctx.arc(-13, -56, 6, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#ff6b1a';
-    ctx.beginPath();
-    ctx.arc(0, 0, 18, 0, Math.PI * 2);
-    ctx.fill();
-
+    // Brass Samai Diya atop pillar
     ctx.fillStyle = '#ffd152';
     ctx.beginPath();
-    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.arc(0, -102, 6, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  // 7. Festival Banner
+  renderFestivalBanner(ctx) {
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-34, -75, 5, 75);
+    ctx.fillRect(29, -75, 5, 75);
 
     ctx.fillStyle = '#d62828';
-    ctx.beginPath();
-    ctx.arc(0, 0, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    ctx.fillRect(-32, -70, 64, 34);
+
+    ctx.fillStyle = '#ffd152';
+    for (let t = -30; t <= 30; t += 8) {
+      ctx.fillRect(t, -36, 4, 8);
+    }
+
+    ctx.fillStyle = '#ffd152';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('॥ जय गणेश ॥', 0, -52);
   }
 
-  // 8. Hanging Festive Kandils (Lanterns)
-  renderKandilLights(ctx) {
-    // Pole
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(-4, -75, 4, 75);
+  // 8. Ornate Brass Pedestal Diya (Samai Lamp with Glowing Flames)
+  renderPedestalDiya(ctx) {
+    // Stone Plinth
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(-14, -6, 28, 6);
 
-    // Hanging string
+    // Carved Brass Stem
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-3.5, -45, 7, 40);
+
+    // 3 Tiers of Oil Lamps
+    [-20, -32, -45].forEach((ly, idx) => {
+      const radius = 18 - idx * 4;
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.ellipse(0, ly, radius, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glowing Flames
+      ctx.fillStyle = '#ff8426';
+      ctx.shadowColor = '#ffd152';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(-radius * 0.7, ly - 4, 3, 0, Math.PI * 2);
+      ctx.arc(0, ly - 5, 3.5, 0, Math.PI * 2);
+      ctx.arc(radius * 0.7, ly - 4, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+  }
+
+  // 9. Hanging Star Kandil Lantern Post
+  renderKandilLights(ctx) {
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(-4, -85, 4, 85);
+
     ctx.strokeStyle = '#ffd152';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(-4, -75);
-    ctx.lineTo(-18, -55);
+    ctx.moveTo(-4, -85);
+    ctx.lineTo(-24, -62);
     ctx.stroke();
 
-    // Diamond Star Kandil (Lantern)
+    // Star Kandil Lantern
     ctx.fillStyle = '#f43f5e';
+    ctx.shadowColor = '#ffd152';
+    ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.moveTo(-18, -62);
-    ctx.lineTo(-10, -50);
-    ctx.lineTo(-18, -38);
-    ctx.lineTo(-26, -50);
+    ctx.moveTo(-24, -72);
+    ctx.lineTo(-14, -58);
+    ctx.lineTo(-24, -44);
+    ctx.lineTo(-34, -58);
     ctx.closePath();
     ctx.fill();
+    ctx.shadowBlur = 0;
 
-    // Golden fringes
+    // Golden Streamers
     ctx.fillStyle = '#ffd152';
-    for (let f = -24; f <= -12; f += 4) {
-      ctx.fillRect(f, -38, 2, 8);
+    for (let f = -32; f <= -16; f += 4) {
+      ctx.fillRect(f, -44, 2, 10);
+    }
+  }
+
+  // 10. Traditional Festive Umbrella (Chattri)
+  renderFestiveUmbrella(ctx) {
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-3, -75, 6, 75);
+
+    // Colorful Fabric Dome
+    ctx.fillStyle = '#e11d48';
+    ctx.beginPath();
+    ctx.arc(0, -75, 32, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    // Gold Trim & Hanging Tassels
+    ctx.fillStyle = '#ffd152';
+    ctx.fillRect(-34, -75, 68, 5);
+    for (let t = -30; t <= 30; t += 10) {
+      ctx.fillRect(t, -70, 3, 7);
     }
   }
 }
@@ -2506,7 +2930,6 @@ class MissionManager {
 
   generateMissions() {
     const shuffled = [...this.pool].sort(() => Math.random() - 0.5);
-    // 4 active missions per run
     this.activeMissions = shuffled.slice(0, 4).map(m => ({
       ...m,
       current: 0,
@@ -2532,10 +2955,17 @@ class MissionManager {
           this.game.audio.playPowerUp();
           this.game.showToast(`✓ TASK COMPLETE! +${m.reward} COINS 🪙`);
 
-          // Check if all tasks completed!
           const completedCount = this.activeMissions.filter(x => x.completed).length;
           if (completedCount === this.activeMissions.length) {
-            this.game.showBannerAlert("🙏 ALL FESTIVAL TASKS COMPLETE!");
+            this.game.showBannerAlert("🙏 ALL FESTIVAL TASKS COMPLETE!", 2200);
+            this.game.coins += 250;
+            this.game.updateCoinsHUD();
+            // Trigger Grand Visarjan / Ganesha Finale celebration
+            setTimeout(() => {
+              if (this.game.state === 'PLAYING') {
+                this.game.triggerGaneshaDestination();
+              }
+            }, 1200);
           }
         }
       }
@@ -2578,7 +3008,7 @@ class MissionManager {
 }
 
 // ----------------------------------------------------------------------------
-// 11. INPUT MANAGER (Modern Temple Run-Style Swipe Controls & Desktop Keys)
+// 11. INPUT MANAGER (Temple Run Swipe Controls & Desktop Keys)
 // ----------------------------------------------------------------------------
 class InputManager {
   constructor(game) {
@@ -2586,7 +3016,6 @@ class InputManager {
   }
 
   bindEvents() {
-    // Desktop Keyboard
     window.addEventListener('keydown', (e) => {
       if (!this.game.audio.unlocked) {
         this.game.audio.init();
@@ -2626,12 +3055,11 @@ class InputManager {
       }
     });
 
-    // Mobile Temple Run-Style Swipe Controls (Zero delay, instant response)
     const container = document.getElementById('game-container');
     let touchStartX = 0;
     let touchStartY = 0;
     let swipeTriggered = false;
-    const SWIPE_THRESHOLD = 26; // px threshold for snappy response
+    const SWIPE_THRESHOLD = 26;
 
     container.addEventListener('touchstart', (e) => {
       if (!this.game.audio.unlocked) this.game.audio.init();
@@ -2662,7 +3090,6 @@ class InputManager {
     }, { passive: true });
 
     container.addEventListener('touchend', (e) => {
-      // Catch quick release flicks if not already fired in move
       if (!swipeTriggered && this.game.state === 'PLAYING') {
         const t = e.changedTouches[0];
         const dx = t.clientX - touchStartX;
@@ -2683,7 +3110,6 @@ class InputManager {
       swipeTriggered = false;
     }, { passive: true });
 
-    // Screen Buttons
     document.getElementById('btnStartGame').addEventListener('click', () => {
       this.game.audio.init();
       this.game.audio.playClick();
@@ -2780,10 +3206,9 @@ class Game {
     this.canvas = document.getElementById('gameCanvas');
     this.ctx = this.canvas.getContext('2d');
 
-    // Engine Components
     this.audio = new AudioManager();
     this.perspective = new PerspectiveEngine(this.canvas);
-    this.particles = new ParticleSystem(400);
+    this.particles = new ParticleSystem(600);
     this.player = new Player(this);
     this.obstacles = new ObstacleManager(this);
     this.collectibles = new CollectibleManager(this);
@@ -2792,10 +3217,8 @@ class Game {
     this.missions = new MissionManager(this);
     this.input = new InputManager(this);
 
-    // State Machine: MENU, PLAYING, PAUSED, DESTINATION_CELEBRATION, GAME_OVER, FINALE
     this.state = 'MENU';
 
-    // Game Stats
     this.score = 0;
     this.distance = 0;
     this.modaks = 0;
@@ -2804,33 +3227,28 @@ class Game {
     this.speed = CONFIG.BASE_SPEED;
     this.highScore = 0;
 
-    // Combo System
     this.comboCount = 0;
     this.comboMultiplier = 1;
     this.comboTimer = 0;
     this.bestCombo = 1;
     this.nearMissCount = 0;
 
-    // Festival Landmarks
+    // 6 Themed Celebration Landmarks & Zones (0-20%, 20-40%, 40-60%, 60-80%, 80-95%, 95-100%)
     this.landmarks = [
-      { dist: 0, name: 'FESTIVAL ENTRANCE', shown: false },
-      { dist: 500, name: 'DHOL CHOWK', shown: false },
-      { dist: 1100, name: 'FLOWER BAZAAR', shown: false },
-      { dist: 1700, name: 'GRAND PANDAL STREET', shown: false },
-      { dist: 2300, name: 'GANESHA DESTINATION', shown: false }
+      { dist: 0, name: 'FESTIVAL ENTRANCE', icon: '🛕', shown: false },
+      { dist: 480, name: 'FESTIVAL STREET', icon: '🎊', shown: false },
+      { dist: 960, name: 'DHOL CHOWK', icon: '🥁', shown: false },
+      { dist: 1440, name: 'FLOWER BAZAAR', icon: '🌸', shown: false },
+      { dist: 1920, name: 'GRAND FESTIVAL NIGHT', icon: '🏮', shown: false },
+      { dist: 2280, name: 'GANESHA DESTINATION', icon: '🙏', shown: false }
     ];
 
-    // Blessing event trigger
     this.lastBlessingDist = 0;
-
-    // Celebration Timer
     this.celebrationTimer = 0;
 
-    // Screen Shake FX
     this.shakeTimer = 0;
     this.shakeIntensity = 0;
 
-    // Animation Loop Tracking
     this.lastTimestamp = 0;
     this.rafId = null;
 
@@ -2886,10 +3304,8 @@ class Game {
     this.lastBlessingDist = 0;
     this.celebrationTimer = 0;
 
-    // Reset landmarks
     this.landmarks.forEach(lm => lm.shown = false);
 
-    // Reset systems
     this.player.reset();
     this.obstacles.reset();
     this.collectibles.reset();
@@ -2904,7 +3320,6 @@ class Game {
 
     this.audio.startDholRhythm();
 
-    // First run swipe hint auto-fadeout
     const hint = document.getElementById('swipeTutorialHint');
     if (hint) {
       hint.classList.add('show');
@@ -2934,7 +3349,6 @@ class Game {
     this.audio.startDholRhythm();
   }
 
-  // ENDING A: FAILED RUN (Lives hit 0)
   gameOver() {
     this.state = 'GAME_OVER';
     this.audio.stopDholRhythm();
@@ -2960,17 +3374,16 @@ class Game {
     document.getElementById('screenGameOver').classList.add('active');
   }
 
-  // ENDING B: REACHED GRAND GANESHA DESTINATION (Celebration Sequence)
   triggerGaneshaDestination() {
     if (this.state === 'DESTINATION_CELEBRATION' || this.state === 'FINALE') return;
     this.state = 'DESTINATION_CELEBRATION';
-    this.celebrationTimer = 4.0; // 4 seconds of grand celebration before results
+    this.celebrationTimer = 4.8;
+    this.celebrationPhase = 1;
 
     this.audio.playFinale();
-    this.showBannerAlert("GANAPATI BAPPA MORYA! 🙏");
+    this.showBannerAlert("GANAPATI BAPPA MORYA! 🙏", 2200);
 
-    // Burst celebration fireworks & golden flower shower
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 80; i++) {
       this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.4), 1, {
         colors: ['#ffd152', '#ff6b1a', '#fff', '#f43f5e', '#38bdf8'],
         minSpeed: 2,
@@ -3006,17 +3419,28 @@ class Game {
     document.querySelectorAll('.screen-overlay').forEach(el => el.classList.remove('active'));
   }
 
-  showLandmark(name) {
+  showLandmark(name, icon = '📍') {
     this.audio.playLandmarkChime();
     const banner = document.getElementById('landmarkBanner');
     const textEl = document.getElementById('landmarkText');
+    const iconEl = banner ? banner.querySelector('.landmark-icon') : null;
     if (!banner || !textEl) return;
 
+    if (iconEl) iconEl.textContent = icon;
     textEl.textContent = name;
     banner.classList.add('active');
-    setTimeout(() => {
+    if (this.landmarkTimeout) clearTimeout(this.landmarkTimeout);
+    this.landmarkTimeout = setTimeout(() => {
       banner.classList.remove('active');
-    }, 2500);
+    }, 2800);
+
+    // Landmark celebratory burst
+    this.particles.spawn(this.width * 0.5, this.height * 0.22, 28, {
+      colors: ['#ffd152', '#ff6b1a', '#ff4d6d', '#fff'],
+      minSpeed: 2,
+      maxSpeed: 6.5,
+      shape: 'spark'
+    });
   }
 
   toggleSound() {
@@ -3042,9 +3466,6 @@ class Game {
     }
   }
 
-  // --------------------------------------------------------------------------
-  // GAMEPLAY MECHANICS & EVENT HANDLERS
-  // --------------------------------------------------------------------------
   collectItem(item) {
     if (item.type === 'MODAK') {
       this.audio.playModak();
@@ -3253,12 +3674,13 @@ class Game {
     }, 3200);
   }
 
-  showBannerAlert(text) {
+  showBannerAlert(text, duration = 1400) {
     const alert = document.getElementById('bannerAlert');
     if (!alert) return;
     alert.textContent = text;
     alert.classList.add('show');
-    setTimeout(() => alert.classList.remove('show'), 1200);
+    if (this.bannerAlertTimeout) clearTimeout(this.bannerAlertTimeout);
+    this.bannerAlertTimeout = setTimeout(() => alert.classList.remove('show'), duration);
   }
 
   updateHUD() {
@@ -3317,13 +3739,11 @@ class Game {
   }
 
   update(dt) {
-    // Dynamic Speed Scaling
     let targetSpeed = CONFIG.BASE_SPEED + this.distance * CONFIG.SPEED_ACCEL;
     if (this.powerUps.isBoostActive) targetSpeed *= 1.45;
     if (this.powerUps.isSlowTime) targetSpeed *= 0.55;
     this.speed = Math.min(CONFIG.MAX_SPEED, targetSpeed);
 
-    // Distance & Distance-based scoring
     const distanceDelta = this.speed * dt * 0.1;
     this.distance += distanceDelta;
     this.score += distanceDelta * 1.2 * (this.powerUps.isDoubleScore ? 2 : 1);
@@ -3333,7 +3753,7 @@ class Game {
     for (let lm of this.landmarks) {
       if (!lm.shown && this.distance >= lm.dist) {
         lm.shown = true;
-        this.showLandmark(lm.name);
+        this.showLandmark(lm.name, lm.icon);
         break;
       }
     }
@@ -3348,7 +3768,7 @@ class Game {
       }
     }
 
-    // Rare Bappa's Blessing Event (every ~650m)
+    // Rare Bappa's Blessing Event
     if (this.distance - this.lastBlessingDist > 650 && Math.random() < 0.005) {
       this.lastBlessingDist = this.distance;
       this.triggerBlessing();
@@ -3360,6 +3780,24 @@ class Game {
       return;
     }
 
+    // Ambient floating marigold petals and golden sparkles
+    if (Math.random() < 0.35) {
+      const px = Math.random() * this.width;
+      const py = Math.random() * (this.height * 0.7);
+      this.particles.spawn(px, py, 1, {
+        colors: ['#ff8426', '#ffd152', '#f43f5e', '#ffba08'],
+        shape: 'petal',
+        minSpeed: 0.8,
+        maxSpeed: 2.5,
+        baseVx: 1.2,
+        baseVy: 0.8,
+        minSize: 2.5,
+        maxSize: 5.5,
+        minDecay: 0.015,
+        maxDecay: 0.025
+      });
+    }
+
     // Update Subsystems
     this.player.update(dt);
     this.obstacles.update(dt);
@@ -3368,10 +3806,8 @@ class Game {
     this.environment.update(dt);
     this.particles.update(dt);
 
-    // Collision Detection
     this.checkCollisions();
 
-    // Screen Shake update
     if (this.shakeTimer > 0) {
       this.shakeTimer -= dt;
       if (this.shakeTimer <= 0) {
@@ -3382,27 +3818,41 @@ class Game {
     this.updateHUD();
   }
 
-  // 3-5s Celebration sequence when reaching Lord Ganesha
   updateCelebration(dt) {
     this.celebrationTimer -= dt;
 
-    // Gently slow player down as they approach Lord Ganesha's sanctum
-    this.speed = Math.max(80, this.speed - 90 * dt);
+    if (this.celebrationTimer <= 2.4 && this.celebrationPhase === 1) {
+      this.celebrationPhase = 2;
+      this.showBannerAlert("FESTIVAL COMPLETE! 🪔", 2200);
+    }
+
+    this.speed = Math.max(50, this.speed - 65 * dt);
     this.distance += this.speed * dt * 0.1;
-    this.score += 150 * dt; // Victory bonus score!
+    this.score += 220 * dt;
 
     this.player.update(dt);
     this.environment.update(dt);
     this.particles.update(dt);
 
-    // Spawn celebratory fireworks & confetti constantly
-    if (Math.random() < 0.35) {
-      this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.4), 4, {
-        colors: ['#ffd152', '#ff6b1a', '#ff4d6d', '#38bdf8', '#fff'],
+    if (Math.random() < 0.55) {
+      this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.35), 3, {
+        colors: ['#ffd152', '#ff6b1a', '#ff4d6d', '#38bdf8', '#fff', '#f59e0b'],
         minSpeed: 3,
-        maxSpeed: 8,
+        maxSpeed: 9,
         shape: 'spark'
       });
+      this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.3), 1, {
+        colors: ['#ff8426', '#ffd152', '#f43f5e'],
+        shape: 'petal',
+        minSpeed: 1,
+        maxSpeed: 3,
+        baseVx: 1.3,
+        baseVy: 1.2
+      });
+    }
+
+    if (Math.random() < 0.06) {
+      this.environment.spawnFirework();
     }
 
     this.updateHUD();
@@ -3423,10 +3873,10 @@ class Game {
 
     this.ctx.clearRect(0, 0, this.width, this.height);
 
-    // 1. Sky, Stars & Horizon Ganesha Destination
+    // 1. Cinematic Sky & Horizon Ganesha Destination
     this.environment.renderSky(this.ctx, this.width, this.height);
 
-    // 2. Road, Curbs & Roadside Scenery
+    // 2. Road, Sidewalks, Curbs & Dense Roadside Scenery
     this.environment.renderRoad(this.ctx);
 
     // 3. Obstacles (sorted back-to-front)
@@ -3441,7 +3891,7 @@ class Game {
       this.player.render(this.ctx);
     }
 
-    // 6. Particle FX & Sparkles
+    // 6. Particle FX & Ambient Petals
     this.particles.render(this.ctx);
 
     this.ctx.restore();

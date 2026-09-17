@@ -38,11 +38,12 @@ The mobile layout offers a completely unobstructed view of the road without on-s
 ## 🛕 Festival Landmarks Along the Route
 
 As you sprint toward Lord Ganesha, you will cross iconic celebration landmarks:
-1. 📍 **Festival Entrance** ($0\text{m}$): Warm sunset sky, entrance torans, and early street diyas.
-2. 📍 **Dhol Chowk** ($500\text{m}$): Thumping dhol-tasha beats, enthusiastic crowds, and large festival banners.
-3. 📍 **Flower Bazaar** ($1100\text{m}$): Twilight purple evening sky, hanging marigold garland stalls, and rose petal offerings.
-4. 📍 **Grand Pandal Street** ($1700\text{m}$): Deep starry night sky, illuminated multi-tier pandals, hanging kandil lanterns, and fireworks.
-5. 📍 **Ganesha Destination** ($2300\text{m}\text{--}2400\text{m}$): The grand celebration destination where the giant illuminated idol awaits!
+1. 📍 **Festival Entrance** ($0\text{m}$ / $0\%$): Warm sunset sky, entrance arch gates, pedestal brass diyas, and welcome banners.
+2. 📍 **Festival Street** ($480\text{m}$ / $20\%$): Golden evening, modak sweets stalls, festive umbrellas, and cheering devotee families.
+3. 📍 **Dhol Chowk** ($960\text{m}$ / $40\%$): Blue/purple evening, thumping dhol-tasha drummers with animated beating arms, fluttering saffron flags, and floating flower petals.
+4. 📍 **Flower Bazaar** ($1440\text{m}$ / $60\%$): Vibrant flower bazaar stalls with cascading marigold curtains, rose heaps, and hanging torans.
+5. 📍 **Grand Festival Night** ($1920\text{m}$ / $80\%$): Deep starry festival night, glowing moon, towering illuminated pandals, hanging star kandil lanterns, and fireworks.
+6. 📍 **Ganesha Destination** ($2280\text{m}\text{--}2400\text{m}$ / $95\%\text{--}100\%$): The grand celebration destination where the giant illuminated idol with radiant Prabhavali halo awaits!
 
 ---
 
