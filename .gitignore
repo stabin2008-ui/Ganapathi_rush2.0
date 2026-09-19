@@ -12,3 +12,7 @@ yarn-error.log*
 .env
 .env.*
 *.log
+
+# Scratch & QA artifacts
+scratch/
+qa_*.png

@@ -1,9 +1,11 @@
 /**
  * ============================================================================
- * GANAPATHI RUSH 2.0 — MASTER FESTIVAL RUNNER ENGINE
+ * GANAPATHI RUSH 2.0 — TRUE 3D MASTER FESTIVAL RUNNER
  * "Run • Collect • Celebrate • Reach Bappa"
- * Visual Overhaul: Rich, Cinematic Indian Ganesh Chaturthi Festival Street
- * Built completely from scratch with HTML5 Canvas 2D & Web Audio API
+ * Built with Three.js (WebGL), Real 3D Meshes, Dynamic Lighting & Shadows,
+ * Procedural Indian Devotee Character, Volumetric Festival Vehicles,
+ * 3D Heritage Havelis, Bazaars, Ganesh Pandals, Overhead Wire Canopies,
+ * 3D Diyas, Rangoli, Star Kandils, Fireworks, and Web Audio API.
  * ============================================================================
  */
 
@@ -13,31 +15,46 @@
 // 1. CONSTANTS & CONFIGURATION
 // ----------------------------------------------------------------------------
 const CONFIG = {
-  // Road & Perspective
-  ROAD_LENGTH: 850,       // Max Z depth
-  HORIZON_Y_RATIO: 0.32,  // Horizon height on canvas
-  ROAD_BASE_Y_RATIO: 0.90,// Base of the road on canvas
-  BASE_ROAD_WIDTH: 780,   // Base road width at player
-  CAM_DEPTH: 250,         // Perspective camera focal depth
+  // True 3D World & Lane Coordinates
+  LANE_COUNT: 3,
+  LANE_WIDTH: 3.2,
+  LANES: [-3.2, 0, 3.2],       // 0: Left (-3.2), 1: Center (0), 2: Right (+3.2)
+  PLAYER_Z: 0,
+  ROAD_WIDTH: 11.5,
+  ROAD_SEGMENT_LENGTH: 40.0,
+  ROAD_SEGMENT_COUNT: 7,       // Segments from Z = +40 down to Z = -240
+  SPAWN_Z: -140.0,             // Horizon spawn distance (inside 50-240 fog range for smooth fade-in)
+  DESPAWN_Z: 4.5,              // Despawn behind player before reaching camera
 
-  // Physics & Movement
-  BASE_SPEED: 260,        // Starting speed (units/s)
-  MAX_SPEED: 520,         // Maximum speed
-  SPEED_ACCEL: 0.08,      // Speed increment per meter
-  LANE_LERP_SPEED: 15.0,  // Smooth lane interpolation speed
-  GRAVITY: -38.0,         // Jump gravity
-  JUMP_FORCE: 14.2,       // Jump launch velocity
-  SLIDE_DURATION: 0.55,   // Slide duration in seconds
+  // Camera Third-Person Perspective Configuration
+  CAM_FOV: 55,
+  CAM_POS_Y: 4.2,
+  CAM_POS_Z: 9.6,
+  CAM_LOOK_Y: 1.65,
+  CAM_LOOK_Z: -18.0,
+  CAM_NEAR: 0.1,
+  CAM_FAR: 380,
+  CAM_LERP_SPEED: 8.5,
 
-  // Hitbox Calibration (Smaller than sprite for fairness)
-  PLAYER_HIT_W: 0.45,
-  PLAYER_HIT_H: 0.60,
-  PLAYER_SLIDE_H: 0.25,
-  HIT_DEPTH_THRESHOLD: 32,
+  // Player Physics & Movement
+  BASE_SPEED: 32.0,            // Starting speed (world units/s)
+  MAX_SPEED: 70.0,             // Max top speed
+  SPEED_ACCEL: 0.014,          // Speed increment per meter traveled
+  LANE_LERP_SPEED: 18.0,       // Lateral lane interpolation
+  JUMP_FORCE: 14.5,            // Jump launch velocity
+  GRAVITY: -36.0,              // Gravity acceleration
+  SLIDE_DURATION: 0.60,        // Slide crouch duration
+  MAX_JUMP_HEIGHT: 2.8,
 
-  // Destination & Milestones
-  DESTINATION_DISTANCE: 2400, // Distance to reach Grand Ganesha Pandal
-  INVULNERABLE_TIME: 1.25,    // Post-hit invulnerability duration
+  // Collision Hitbox Thresholds (World Units)
+  PLAYER_HIT_W: 1.2,
+  PLAYER_HIT_H: 2.1,
+  PLAYER_SLIDE_H: 0.9,
+  HIT_DEPTH_Z: 1.8,
+
+  // Milestones & Destination
+  DESTINATION_DISTANCE: 2400,  // Distance to reach Grand Ganesha Pandal
+  INVULNERABLE_TIME: 1.35,     // Post-hit invulnerability
 
   // Audio Volumes
   SFX_VOLUME: 0.55,
@@ -95,10 +112,43 @@ class AudioManager {
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 1.0, this.ctx.currentTime);
     }
-    return !this.isMuted;
+    return this.isMuted;
   }
 
-  // Modak Collection: 2-tone melodic crystalline chime
+  play(soundName) {
+    if (!this.unlocked || this.isMuted || !this.ctx) return;
+    switch (soundName) {
+      case 'whoosh':
+      case 'slide':
+        this.playSlide();
+        break;
+      case 'jump':
+        this.playJump();
+        break;
+      case 'modak':
+        this.playModak();
+        break;
+      case 'coin':
+        this.playCoin();
+        break;
+      case 'hit':
+        this.playHit();
+        break;
+      case 'shield':
+        this.playShield();
+        break;
+      case 'shieldBreak':
+        this.playShieldBreak();
+        break;
+      case 'gameOver':
+        this.playGameOver();
+        break;
+      case 'nearMiss':
+        this.playNearMiss();
+        break;
+    }
+  }
+
   playModak() {
     if (!this.unlocked || this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;
@@ -113,7 +163,7 @@ class AudioManager {
     osc2.frequency.setValueAtTime(1318.51, t); // E6
     osc2.frequency.exponentialRampToValueAtTime(1567.98, t + 0.12); // G6
 
-    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.setValueAtTime(0.24, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
 
     osc1.connect(gain);
@@ -126,7 +176,6 @@ class AudioManager {
     osc2.stop(t + 0.25);
   }
 
-  // Coin Collection: Crisp metallic sparkle ring
   playCoin() {
     if (!this.unlocked || this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;
@@ -147,53 +196,30 @@ class AudioManager {
     osc.stop(t + 0.22);
   }
 
-  // Jump: Snappy upward air whoosh
   playJump() {
     if (!this.unlocked || this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(180, t);
-    osc.frequency.exponentialRampToValueAtTime(540, t + 0.16);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(160, t);
+    osc.frequency.exponentialRampToValueAtTime(540, t + 0.18);
 
     gain.gain.setValueAtTime(0.22, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
 
     osc.connect(gain);
     gain.connect(this.sfxGain);
 
     osc.start(t);
-    osc.stop(t + 0.18);
+    osc.stop(t + 0.22);
   }
 
-  // Landing: Low soft dust thud
-  playLand() {
-    if (!this.unlocked || this.isMuted || !this.ctx) return;
-    const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(120, t);
-    osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
-
-    gain.gain.setValueAtTime(0.20, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-
-    osc.connect(gain);
-    gain.connect(this.sfxGain);
-
-    osc.start(t);
-    osc.stop(t + 0.12);
-  }
-
-  // Slide: Quick filtered white noise sweep
   playSlide() {
     if (!this.unlocked || this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;
-    const bufferSize = this.ctx.sampleRate * 0.2;
+    const bufferSize = this.ctx.sampleRate * 0.28;
     const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
@@ -205,12 +231,12 @@ class AudioManager {
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(800, t);
-    filter.frequency.exponentialRampToValueAtTime(200, t + 0.2);
+    filter.frequency.setValueAtTime(1100, t);
+    filter.frequency.exponentialRampToValueAtTime(320, t + 0.28);
 
     const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.18, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
 
     noise.connect(filter);
     filter.connect(gain);
@@ -219,29 +245,6 @@ class AudioManager {
     noise.start(t);
   }
 
-  // Near Miss: High speed doppler whoosh with sparkle
-  playNearMiss() {
-    if (!this.unlocked || this.isMuted || !this.ctx) return;
-    const t = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(440, t);
-    osc.frequency.exponentialRampToValueAtTime(880, t + 0.08);
-    osc.frequency.exponentialRampToValueAtTime(330, t + 0.24);
-
-    gain.gain.setValueAtTime(0.28, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
-
-    osc.connect(gain);
-    gain.connect(this.sfxGain);
-
-    osc.start(t);
-    osc.stop(t + 0.24);
-  }
-
-  // Hit / Collision: Low impactful rumble
   playHit() {
     if (!this.unlocked || this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;
@@ -249,420 +252,1251 @@ class AudioManager {
     const gain = this.ctx.createGain();
 
     osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(140, t);
-    osc.frequency.exponentialRampToValueAtTime(30, t + 0.28);
+    osc.frequency.setValueAtTime(180, t);
+    osc.frequency.exponentialRampToValueAtTime(45, t + 0.26);
 
-    gain.gain.setValueAtTime(0.40, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+    gain.gain.setValueAtTime(0.35, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.30);
 
     osc.connect(gain);
     gain.connect(this.sfxGain);
 
     osc.start(t);
-    osc.stop(t + 0.32);
+    osc.stop(t + 0.30);
   }
 
-  // Shield Break: Crystalline shatter
   playShieldBreak() {
     if (!this.unlocked || this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;
-    [1046, 1318, 1567, 2093].forEach((freq, i) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t + i * 0.03);
-      gain.gain.setValueAtTime(0.18, t + i * 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.03 + 0.22);
-      osc.connect(gain);
-      gain.connect(this.sfxGain);
-      osc.start(t + i * 0.03);
-      osc.stop(t + i * 0.03 + 0.22);
-    });
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.exponentialRampToValueAtTime(220, t + 0.3);
+
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.35);
   }
 
-  // Combo Up: Harmonic ascending arpeggio
-  playComboUp(tier = 2) {
-    if (!this.unlocked || this.isMuted || !this.ctx) return;
-    const t = this.ctx.currentTime;
-    const baseFreqs = [523.25, 659.25, 783.99, 1046.50, 1318.51];
-    const freqs = baseFreqs.slice(0, Math.min(tier + 1, baseFreqs.length));
-
-    freqs.forEach((freq, idx) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, t + idx * 0.05);
-
-      gain.gain.setValueAtTime(0.20, t + idx * 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.05 + 0.25);
-
-      osc.connect(gain);
-      gain.connect(this.sfxGain);
-      osc.start(t + idx * 0.05);
-      osc.stop(t + idx * 0.05 + 0.25);
-    });
-  }
-
-  // Power-Up Pickup: Festive fanfare swell
   playPowerUp() {
     if (!this.unlocked || this.isMuted || !this.ctx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.50];
     const t = this.ctx.currentTime;
-    const chords = [440, 554.37, 659.25, 880];
-    chords.forEach((freq) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq * 0.8, t);
-      osc.frequency.exponentialRampToValueAtTime(freq, t + 0.12);
-
-      gain.gain.setValueAtTime(0.12, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
-
-      osc.connect(gain);
-      gain.connect(this.sfxGain);
-      osc.start(t);
-      osc.stop(t + 0.4);
-    });
-  }
-
-  // Bappa's Blessing: Sacred temple bell chime
-  playBlessing() {
-    if (!this.unlocked || this.isMuted || !this.ctx) return;
-    const t = this.ctx.currentTime;
-    [261.63, 523.25, 784, 1046.5].forEach((freq) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t);
-
-      gain.gain.setValueAtTime(0.18, t);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
-
-      osc.connect(gain);
-      gain.connect(this.sfxGain);
-      osc.start(t);
-      osc.stop(t + 1.6);
-    });
-  }
-
-  // Landmark Arrival Chime
-  playLandmarkChime() {
-    if (!this.unlocked || this.isMuted || !this.ctx) return;
-    const t = this.ctx.currentTime;
-    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(f, t + i * 0.08);
-      gain.gain.setValueAtTime(0.16, t + i * 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.08 + 0.8);
-      osc.connect(gain);
-      gain.connect(this.sfxGain);
-      osc.start(t + i * 0.08);
-      osc.stop(t + i * 0.08 + 0.8);
-    });
-  }
-
-  // Game Over: Solemn descending harmonic drone
-  playGameOver() {
-    if (!this.unlocked || this.isMuted || !this.ctx) return;
-    const t = this.ctx.currentTime;
-    [220, 196, 174.6, 146.8].forEach((freq, idx) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, t + idx * 0.15);
-
-      gain.gain.setValueAtTime(0.15, t + idx * 0.15);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.15 + 0.5);
-
-      osc.connect(gain);
-      gain.connect(this.sfxGain);
-      osc.start(t + idx * 0.15);
-      osc.stop(t + idx * 0.15 + 0.5);
-    });
-  }
-
-  // Finale: Triumphant festive dhol roll
-  playFinale() {
-    if (!this.unlocked || this.isMuted || !this.ctx) return;
-    const t = this.ctx.currentTime;
-    for (let i = 0; i < 12; i++) {
+    notes.forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(100 + i * 18, t + i * 0.07);
-
-      gain.gain.setValueAtTime(0.28, t + i * 0.07);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.07 + 0.16);
-
+      osc.frequency.setValueAtTime(freq, t + idx * 0.07);
+      gain.gain.setValueAtTime(0.2, t + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.07 + 0.18);
       osc.connect(gain);
       gain.connect(this.sfxGain);
-      osc.start(t + i * 0.07);
-      osc.stop(t + i * 0.07 + 0.16);
-    }
+      osc.start(t + idx * 0.07);
+      osc.stop(t + idx * 0.07 + 0.18);
+    });
   }
 
-  // UI Tap
+  playNearMiss() {
+    if (!this.unlocked || this.isMuted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(980, t);
+    osc.frequency.exponentialRampToValueAtTime(1480, t + 0.15);
+    gain.gain.setValueAtTime(0.18, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.2);
+  }
+
+  playLand() {
+    if (!this.unlocked || this.isMuted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(120, t);
+    osc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.12);
+  }
+
   playClick() {
     if (!this.unlocked || this.isMuted || !this.ctx) return;
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, t);
-    gain.gain.setValueAtTime(0.12, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.frequency.setValueAtTime(440, t);
+    osc.frequency.exponentialRampToValueAtTime(880, t + 0.04);
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
     osc.connect(gain);
     gain.connect(this.sfxGain);
     osc.start(t);
-    osc.stop(t + 0.05);
+    osc.stop(t + 0.06);
   }
 
-  // Subtle Dhol Rhythm Generator (Background Loop during gameplay)
+  playGameOver() {
+    if (!this.unlocked || this.isMuted || !this.ctx) return;
+    const notes = [392.00, 349.23, 329.63, 261.63];
+    const t = this.ctx.currentTime;
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.15);
+      gain.gain.setValueAtTime(0.22, t + idx * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.15 + 0.35);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t + idx * 0.15);
+      osc.stop(t + idx * 0.15 + 0.35);
+    });
+  }
+
+  playFinale() {
+    if (!this.unlocked || this.isMuted || !this.ctx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+    const t = this.ctx.currentTime;
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.12);
+      gain.gain.setValueAtTime(0.25, t + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.12 + 0.5);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t + idx * 0.12);
+      osc.stop(t + idx * 0.12 + 0.5);
+    });
+  }
+
+  playDholBass() {
+    if (!this.unlocked || this.isMuted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(130, t);
+    osc.frequency.exponentialRampToValueAtTime(45, t + 0.18);
+
+    gain.gain.setValueAtTime(0.35, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+    osc.connect(gain);
+    gain.connect(this.musicGain);
+
+    osc.start(t);
+    osc.stop(t + 0.22);
+  }
+
+  playTashaSnare() {
+    if (!this.unlocked || this.isMuted || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(620, t);
+    osc.frequency.exponentialRampToValueAtTime(180, t + 0.08);
+
+    gain.gain.setValueAtTime(0.20, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.10);
+
+    osc.connect(gain);
+    gain.connect(this.musicGain);
+
+    osc.start(t);
+    osc.stop(t + 0.10);
+  }
+
   startDholRhythm() {
     if (this.isPlayingRhythm) return;
     this.isPlayingRhythm = true;
     this.rhythmStep = 0;
-    this.scheduleNextDholBeat();
+
+    const pattern = [
+      { bass: true, snare: false },
+      { bass: false, snare: true },
+      { bass: false, snare: true },
+      { bass: true, snare: false },
+      { bass: false, snare: true },
+      { bass: true, snare: true },
+      { bass: false, snare: true },
+      { bass: true, snare: false }
+    ];
+
+    this.rhythmTimer = setInterval(() => {
+      if (!this.isPlayingRhythm) return;
+      const beat = pattern[this.rhythmStep % pattern.length];
+      if (beat.bass) this.playDholBass();
+      if (beat.snare) this.playTashaSnare();
+      this.rhythmStep++;
+    }, 150);
   }
 
   stopDholRhythm() {
     this.isPlayingRhythm = false;
     if (this.rhythmTimer) {
-      clearTimeout(this.rhythmTimer);
+      clearInterval(this.rhythmTimer);
       this.rhythmTimer = null;
     }
   }
-
-  scheduleNextDholBeat() {
-    if (!this.isPlayingRhythm) return;
-    if (this.unlocked && !this.isMuted && this.ctx) {
-      const t = this.ctx.currentTime;
-      const isBass = (this.rhythmStep % 4 === 0) || (this.rhythmStep % 4 === 2);
-      const isRim = (this.rhythmStep % 4 === 1) || (this.rhythmStep % 4 === 3);
-
-      if (isBass) {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(85, t);
-        osc.frequency.exponentialRampToValueAtTime(45, t + 0.14);
-        gain.gain.setValueAtTime(0.16, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-        osc.connect(gain);
-        gain.connect(this.musicGain);
-        osc.start(t);
-        osc.stop(t + 0.15);
-      }
-
-      if (isRim) {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(320, t);
-        osc.frequency.exponentialRampToValueAtTime(180, t + 0.06);
-        gain.gain.setValueAtTime(0.10, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
-        osc.connect(gain);
-        gain.connect(this.musicGain);
-        osc.start(t);
-        osc.stop(t + 0.07);
-      }
-
-      if (this.rhythmStep % 8 === 0) {
-        const bell = this.ctx.createOscillator();
-        const bellGain = this.ctx.createGain();
-        bell.type = 'sine';
-        bell.frequency.setValueAtTime(1760, t);
-        bellGain.gain.setValueAtTime(0.04, t);
-        bellGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
-        bell.connect(bellGain);
-        bellGain.connect(this.musicGain);
-        bell.start(t);
-        bell.stop(t + 0.8);
-      }
-    }
-
-    this.rhythmStep = (this.rhythmStep + 1) % 16;
-    this.rhythmTimer = setTimeout(() => this.scheduleNextDholBeat(), 205);
-  }
 }
 
 // ----------------------------------------------------------------------------
-// 3. PERSPECTIVE ENGINE (3D Projection)
+// 3. TRUE 3D RENDERER & SCENE MANAGER (Three.js WebGL & Atmospheric Night Lighting)
 // ----------------------------------------------------------------------------
-class PerspectiveEngine {
+class ThreeSceneManager {
   constructor(canvas) {
-    this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
-    this.width = canvas.width;
-    this.height = canvas.height;
-    this.horizonY = this.height * CONFIG.HORIZON_Y_RATIO;
-    this.groundBaseY = this.height * CONFIG.ROAD_BASE_Y_RATIO;
-    this.roadBaseHalfWidth = CONFIG.BASE_ROAD_WIDTH * 0.5;
+    this.canvas = canvas || document.getElementById('gameCanvas') || document.getElementById('webgl-canvas');
+    if (!this.canvas) {
+      console.error('Fatal: canvas not found in DOM');
+      return;
+    }
+
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+
+    // 1. Scene Root & Atmospheric Night Fog (Rich Deep Twilight Indigo/Purple, NEVER pitch black!)
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x161331); // Rich Deep Indigo Night Sky
+    this.scene.fog = new THREE.Fog(0x181432, 50, 240);
+
+    // 2. Perspective Camera (Fixed Cinematic Endless-Runner Viewport)
+    this.camera = new THREE.PerspectiveCamera(
+      (typeof CONFIG !== 'undefined' && CONFIG.CAM_FOV) ? CONFIG.CAM_FOV : 55,
+      this.width / this.height,
+      (typeof CONFIG !== 'undefined' && CONFIG.CAM_NEAR) ? CONFIG.CAM_NEAR : 0.1,
+      (typeof CONFIG !== 'undefined' && CONFIG.CAM_FAR) ? CONFIG.CAM_FAR : 380
+    );
+    this.camera.position.set(
+      0,
+      (typeof CONFIG !== 'undefined' && CONFIG.CAM_POS_Y) ? CONFIG.CAM_POS_Y : 4.2,
+      (typeof CONFIG !== 'undefined' && CONFIG.CAM_POS_Z) ? CONFIG.CAM_POS_Z : 9.6
+    );
+    this.camera.lookAt(
+      0,
+      (typeof CONFIG !== 'undefined' && CONFIG.CAM_LOOK_Y) ? CONFIG.CAM_LOOK_Y : 1.65,
+      (typeof CONFIG !== 'undefined' && CONFIG.CAM_LOOK_Z) ? CONFIG.CAM_LOOK_Z : -18.0
+    );
+
+    // 3. High-Performance WebGL Renderer
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      antialias: true,
+      powerPreference: 'high-performance',
+      alpha: false
+    });
+    this.renderer.setSize(this.width, this.height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+
+    // Rich Cinematic Tone Mapping (Exposure 1.12 brings out rich midtones and architectural detail)
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.14;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    // Soft Shadow Mapping (Optimized for smooth 60fps)
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    this.setupLighting();
+    this.setupNightSky();
+    window.addEventListener('resize', () => this.onResize());
   }
 
-  resize(w, h) {
-    this.width = w;
-    this.height = h;
-    this.horizonY = h * CONFIG.HORIZON_Y_RATIO;
-    this.groundBaseY = h * CONFIG.ROAD_BASE_Y_RATIO;
-    this.roadBaseHalfWidth = Math.min(w * 0.44, CONFIG.BASE_ROAD_WIDTH * 0.5);
+  setupLighting() {
+    // A. Ambient Foundation: Rich twilight indigo ambient (brings out building facades & crowds)
+    this.ambientLight = new THREE.AmbientLight(0x3730a3, 0.82);
+    this.scene.add(this.ambientLight);
+
+    // B. Hemisphere Atmosphere: Deep royal purple sky + warm amber festival ground bounce
+    this.hemiLight = new THREE.HemisphereLight(0x4b3fae, 0xf59e0b, 0.95);
+    this.scene.add(this.hemiLight);
+
+    // C. Directional Key Light: Cool silver moonlight casting crisp soft shadows
+    this.dirLight = new THREE.DirectionalLight(0xdbeafe, 1.10);
+    this.dirLight.position.set(-18, 48, 24);
+    this.dirLight.castShadow = true;
+    this.dirLight.shadow.mapSize.width = 1024;
+    this.dirLight.shadow.mapSize.height = 1024;
+    this.dirLight.shadow.camera.near = 0.5;
+    this.dirLight.shadow.camera.far = 160;
+    this.dirLight.shadow.camera.left = -24;
+    this.dirLight.shadow.camera.right = 24;
+    this.dirLight.shadow.camera.top = 24;
+    this.dirLight.shadow.camera.bottom = -24;
+    this.dirLight.shadow.bias = -0.0004;
+    this.scene.add(this.dirLight);
+
+    // D. Dynamic Player Diya Glow: Warm golden lantern light attached to player
+    this.playerGlow = new THREE.PointLight(0xffb703, 1.35, 10.0, 2.0);
+    this.playerGlow.position.set(0, 2.0, 1.0);
+    this.scene.add(this.playerGlow);
   }
 
-  project(laneX, worldY = 0, worldZ = 0) {
-    const scale = CONFIG.CAM_DEPTH / (worldZ + CONFIG.CAM_DEPTH);
-    const pRatio = Math.pow(scale, 1.28);
-    const screenY = this.horizonY + (this.groundBaseY - this.horizonY) * pRatio - worldY * scale;
-    const roadHalfWidthAtZ = this.roadBaseHalfWidth * scale;
-    const laneWidth = (roadHalfWidthAtZ * 2) / 3;
-    const screenX = (this.width * 0.5) + laneX * laneWidth;
+  setupNightSky() {
+    this.skyGroup = new THREE.Group();
 
-    return {
-      x: screenX,
-      y: screenY,
-      scale: scale,
-      laneWidth: laneWidth,
-      roadHalfWidth: roadHalfWidthAtZ
-    };
+    // 0. Sky Hemisphere Gradient Dome (Deep Midnight Navy to Royal Purple Horizon)
+    const skyGeo = new THREE.SphereGeometry(230, 32, 16);
+    const pos = skyGeo.attributes.position;
+    const colors = [];
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      const factor = Math.max(0, Math.min(1, y / 230));
+      // Top: Deep midnight navy (15/255, 12/255, 41/255)
+      // Horizon: Warm royal twilight purple (40/255, 30/255, 75/255)
+      const r = (15 + (40 - 15) * (1 - factor)) / 255;
+      const g = (12 + (30 - 12) * (1 - factor)) / 255;
+      const b = (41 + (75 - 41) * (1 - factor)) / 255;
+      colors.push(r, g, b);
+    }
+    skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    const skyMat = new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      side: THREE.BackSide,
+      depthWrite: false
+    });
+    this.skyMesh = new THREE.Mesh(skyGeo, skyMat);
+    this.skyGroup.add(this.skyMesh);
+
+    // 1. Twinkling Starfield (1200 stars placed inside visible fog arc)
+    const starCount = 1200;
+    const starGeo = new THREE.BufferGeometry();
+    const starPositions = new Float32Array(starCount * 3);
+    const starColors = new Float32Array(starCount * 3);
+
+    for (let i = 0; i < starCount; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI * 0.40;
+      const r = 160 + Math.random() * 55;
+
+      starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      starPositions[i * 3 + 1] = r * Math.cos(phi) + 12;
+      starPositions[i * 3 + 2] = -Math.abs(r * Math.sin(phi) * Math.sin(theta)) - 25;
+
+      const isGolden = Math.random() > 0.82;
+      starColors[i * 3] = isGolden ? 1.0 : 0.88;
+      starColors[i * 3 + 1] = isGolden ? 0.90 : 0.92;
+      starColors[i * 3 + 2] = isGolden ? 0.65 : 1.0;
+    }
+
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    starGeo.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+
+    const starMat = new THREE.PointsMaterial({
+      size: 1.8,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.88
+    });
+    this.stars = new THREE.Points(starGeo, starMat);
+    this.skyGroup.add(this.stars);
+
+    // 2. 3D Silver-Gold Crescent Moon with Soft Halo (Placed inside visible range)
+    const moonGroup = new THREE.Group();
+    moonGroup.position.set(38, 54, -180);
+
+    const moonGeo = new THREE.SphereGeometry(6.5, 24, 24);
+    const moonMat = new THREE.MeshBasicMaterial({ color: 0xfffae6 });
+    const moon = new THREE.Mesh(moonGeo, moonMat);
+    moonGroup.add(moon);
+
+    const haloGeo = new THREE.RingGeometry(7.0, 16.0, 32);
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: 0xffe89e,
+      transparent: true,
+      opacity: 0.28,
+      side: THREE.DoubleSide
+    });
+    const halo = new THREE.Mesh(haloGeo, haloMat);
+    moonGroup.add(halo);
+
+    this.skyGroup.add(moonGroup);
+    this.scene.add(this.skyGroup);
+  }
+
+  resize(width, height) {
+    const w = width || (this.canvas && this.canvas.parentElement ? this.canvas.parentElement.clientWidth : window.innerWidth);
+    const h = height || (this.canvas && this.canvas.parentElement ? this.canvas.parentElement.clientHeight : window.innerHeight);
+    this.renderer.setSize(w, h, false);
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+  }
+
+  onResize() {
+    this.resize();
+  }
+
+  updateCamera(playerX, dt = 0.016) {
+    const targetCamX = playerX * 0.35;
+    this.camera.position.x += (targetCamX - this.camera.position.x) * 8.0 * dt;
+    this.camera.lookAt(
+      targetCamX * 0.4,
+      (typeof CONFIG !== 'undefined' && CONFIG.CAM_LOOK_Y) ? CONFIG.CAM_LOOK_Y : 1.65,
+      (typeof CONFIG !== 'undefined' && CONFIG.CAM_LOOK_Z) ? CONFIG.CAM_LOOK_Z : -18.0
+    );
+
+    if (this.playerGlow) {
+      this.playerGlow.position.x = playerX;
+      this.playerGlow.position.z = (typeof CONFIG !== 'undefined' && CONFIG.PLAYER_Z !== undefined) ? CONFIG.PLAYER_Z + 1.0 : 1.0;
+    }
+  }
+
+  update(dt, playerX = 0, playerY = 0, isSliding = false) {
+    this.updateCamera(playerX, dt);
+
+    if (this.playerGlow) {
+      this.playerGlow.position.x = playerX;
+      this.playerGlow.position.y = 1.6 + playerY * 0.8;
+      this.playerGlow.intensity = 1.10 + Math.sin(Date.now() * 0.012) * 0.12;
+    }
+
+    if (this.stars) {
+      this.stars.rotation.y += 0.0003 * dt;
+    }
+  }
+
+  render() {
+    this.renderer.render(this.scene, this.camera);
   }
 }
 
-// ----------------------------------------------------------------------------
-// 4. PARTICLE SYSTEM (Object Pooled, 600 Max)
-// ----------------------------------------------------------------------------
-class ParticleSystem {
-  constructor(maxParticles = 600) {
-    this.pool = [];
-    for (let i = 0; i < maxParticles; i++) {
-      this.pool.push({
-        active: false,
-        x: 0,
-        y: 0,
-        vx: 0,
-        vy: 0,
-        size: 2,
-        color: '#ffd152',
-        alpha: 1.0,
-        decay: 0.02,
-        shape: 'circle', // 'circle', 'petal', 'star', 'spark'
-        rotation: 0,
-        vRot: 0
-      });
-    }
-  }
-
-  spawn(x, y, count, options = {}) {
-    let spawned = 0;
-    for (let i = 0; i < this.pool.length && spawned < count; i++) {
-      const p = this.pool[i];
-      if (!p.active) {
-        p.active = true;
-        p.x = x + (Math.random() - 0.5) * (options.spreadX || 10);
-        p.y = y + (Math.random() - 0.5) * (options.spreadY || 10);
-        const speed = (options.minSpeed || 2) + Math.random() * (options.maxSpeed || 8);
-        const angle = options.angle !== undefined
-          ? options.angle + (Math.random() - 0.5) * (options.angleSpread || 0.5)
-          : Math.random() * Math.PI * 2;
-        p.vx = Math.cos(angle) * speed + (options.baseVx || 0);
-        p.vy = Math.sin(angle) * speed + (options.baseVy || 0);
-        p.size = (options.minSize || 3) + Math.random() * (options.maxSize || 5);
-        p.color = options.colors
-          ? options.colors[Math.floor(Math.random() * options.colors.length)]
-          : (options.color || '#ffd152');
-        p.alpha = 1.0;
-        p.decay = (options.minDecay || 0.02) + Math.random() * (options.maxDecay || 0.03);
-        p.shape = options.shape || 'circle';
-        p.rotation = Math.random() * Math.PI * 2;
-        p.vRot = (Math.random() - 0.5) * 0.2;
-        spawned++;
-      }
-    }
-  }
-
-  update(dt) {
-    for (let i = 0; i < this.pool.length; i++) {
-      const p = this.pool[i];
-      if (p.active) {
-        p.x += p.vx * 60 * dt;
-        p.y += p.vy * 60 * dt;
-        p.rotation += p.vRot;
-        p.alpha -= p.decay * 60 * dt;
-        if (p.alpha <= 0) {
-          p.active = false;
-        }
-      }
-    }
-  }
-
-  render(ctx) {
-    ctx.save();
-    for (let i = 0; i < this.pool.length; i++) {
-      const p = this.pool[i];
-      if (p.active) {
-        ctx.globalAlpha = Math.max(0, p.alpha);
-        ctx.fillStyle = p.color;
-
-        if (p.shape === 'petal') {
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate(p.rotation);
-          ctx.beginPath();
-          ctx.ellipse(0, 0, p.size * 1.6, p.size * 0.8, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        } else if (p.shape === 'spark') {
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate(p.rotation);
-          ctx.beginPath();
-          ctx.moveTo(0, -p.size * 2);
-          ctx.lineTo(p.size * 0.5, 0);
-          ctx.lineTo(0, p.size * 2);
-          ctx.lineTo(-p.size * 0.5, 0);
-          ctx.closePath();
-          ctx.fill();
-          ctx.restore();
-        } else {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-    }
-    ctx.restore();
-  }
-
-  clear() {
-    this.pool.forEach(p => p.active = false);
-  }
-}
-
-// ----------------------------------------------------------------------------
-// 5. PLAYER CONTROLLER
-// ----------------------------------------------------------------------------
-class Player {
+// ============================================================================
+// 6. TRUE 3D ROAD & SIDEWALK MANAGER (Matte Night Asphalt, Clear Lanes & Diyas)
+// ============================================================================
+class Road3DManager {
   constructor(game) {
     this.game = game;
-    this.lane = 1;          // 0: Left, 1: Center, 2: Right
-    this.currentLaneX = 0;  // Interpolated world X (-1 to 1)
-    this.jumpY = 0;         // Height off ground (world units)
+    this.scene = game.three.scene;
+    this.segments = [];
+    this.diyaLights = [];
+
+    // Procedural Matte Dark Asphalt Texture
+    this.asphaltTexture = this.createDarkAsphaltTexture();
+
+    // Road Material: Deep twilight slate-charcoal (Dark & rich, NEVER pure pitch black!)
+    this.roadMaterial = new THREE.MeshStandardMaterial({
+      map: this.asphaltTexture,
+      roughness: 0.80,
+      metalness: 0.04,
+      color: 0xffffff
+    });
+
+    this.curbMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8291a5,
+      roughness: 0.68,
+      metalness: 0.05
+    });
+
+    this.sidewalkMaterial = new THREE.MeshStandardMaterial({
+      color: 0x3d4a61,
+      roughness: 0.72,
+      metalness: 0.06
+    });
+
+    this.diyaClayMat = new THREE.MeshStandardMaterial({
+      color: 0xb45309,
+      roughness: 0.78
+    });
+
+    this.diyaFlameMat = new THREE.MeshBasicMaterial({
+      color: 0xffb703
+    });
+
+    this.petalMatOrange = new THREE.MeshBasicMaterial({ color: 0xff6b1a });
+    this.petalMatYellow = new THREE.MeshBasicMaterial({ color: 0xffd152 });
+    this.petalMatRose = new THREE.MeshBasicMaterial({ color: 0xdc2626 });
+
+    this.rangoliMat = new THREE.MeshBasicMaterial({
+      color: 0xfacc15,
+      side: THREE.DoubleSide
+    });
+
+    this.urliMat = new THREE.MeshStandardMaterial({
+      color: 0xd97706,
+      metalness: 0.85,
+      roughness: 0.25
+    });
+
+    this.initRoadSegments();
+  }
+
+  createWetAsphaltTexture() {
+    return this.createDarkAsphaltTexture();
+  }
+
+  createDarkAsphaltTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    // 1. Deep Midnight Slate Indigo Asphalt Base (Rich textured asphalt, NOT black!)
+    ctx.fillStyle = '#242b40';
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // 2. Subtle Matte Grain Texture
+    for (let i = 0; i < 14000; i++) {
+      const gx = Math.random() * 1024;
+      const gy = Math.random() * 1024;
+      const gColor = Math.random() > 0.5 ? 'rgba(255,255,255,0.035)' : 'rgba(10,14,24,0.06)';
+      ctx.fillStyle = gColor;
+      ctx.fillRect(gx, gy, 2, 2);
+    }
+
+    // 3. Subtle Tire Tracks
+    ctx.fillStyle = 'rgba(20, 24, 38, 0.45)';
+    ctx.fillRect(160, 0, 120, 1024);
+    ctx.fillRect(380, 0, 120, 1024);
+    ctx.fillRect(560, 0, 120, 1024);
+    ctx.fillRect(780, 0, 120, 1024);
+
+    // 4. Solid Crisp White Outer Curb Lines
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(16, 0, 18, 1024);
+    ctx.fillRect(990, 0, 18, 1024);
+
+    // 5. Crisp Dashed Lane Dividing Stripes (Golden-Ivory festival lane markers)
+    const dashH = 96;
+    const gapH = 64;
+    const totalStep = dashH + gapH;
+
+    for (let y = 0; y < 1024; y += totalStep) {
+      // Left Lane Divider (Crisp Ivory)
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(328, y, 15, dashH);
+
+      // Right Lane Divider (Crisp Ivory)
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(682, y, 15, dashH);
+
+      // Center Lane Accents (Warm Golden Amber)
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(505, y + 20, 14, dashH * 0.65);
+    }
+
+    // 6. Scattered Marigold & Rose Festival Petals on Road
+    for (let p = 0; p < 80; p++) {
+      const px = Math.random() * 960 + 32;
+      const py = Math.random() * 1024;
+      const pColor = Math.random() > 0.6 ? '#f97316' : (Math.random() > 0.3 ? '#facc15' : '#e11d48');
+      ctx.fillStyle = pColor;
+      ctx.beginPath();
+      ctx.ellipse(px, py, 3.5, 2.0, Math.random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(1, 4);
+    return tex;
+  }
+
+  initRoadSegments() {
+    const count = (typeof CONFIG !== 'undefined' && CONFIG.ROAD_SEGMENT_COUNT) ? CONFIG.ROAD_SEGMENT_COUNT : 7;
+    const length = (typeof CONFIG !== 'undefined' && CONFIG.ROAD_SEGMENT_LENGTH) ? CONFIG.ROAD_SEGMENT_LENGTH : 40.0;
+
+    for (let i = 0; i < count; i++) {
+      const z = -i * length + 40.0;
+      const seg = this.createRoadSegment(length, z);
+      this.segments.push(seg);
+      this.scene.add(seg.group);
+    }
+  }
+
+  createRoadSegment(length, z) {
+    const group = new THREE.Group();
+    group.position.set(0, 0, z);
+
+    const roadW = (typeof CONFIG !== 'undefined' && CONFIG.ROAD_WIDTH) ? CONFIG.ROAD_WIDTH : 11.5;
+
+    // 1. Main 3-Lane Asphalt Mesh
+    const roadGeo = new THREE.PlaneGeometry(roadW, length);
+    roadGeo.rotateX(-Math.PI * 0.5);
+    const roadMesh = new THREE.Mesh(roadGeo, this.roadMaterial);
+    roadMesh.receiveShadow = true;
+    group.add(roadMesh);
+
+    // 2. Left & Right Stone Curbs
+    [-1, 1].forEach(side => {
+      const curbGeo = new THREE.BoxGeometry(0.35, 0.28, length);
+      const curb = new THREE.Mesh(curbGeo, this.curbMaterial);
+      curb.position.set(side * (roadW * 0.5 + 0.175), 0.14, 0);
+      curb.receiveShadow = true;
+      group.add(curb);
+
+      // Sidewalk Walkway
+      const swGeo = new THREE.BoxGeometry(4.8, 0.20, length);
+      const sw = new THREE.Mesh(swGeo, this.sidewalkMaterial);
+      sw.position.set(side * (roadW * 0.5 + 2.75), 0.10, 0);
+      sw.receiveShadow = true;
+      group.add(sw);
+
+      // Delicate Clay Diyas Along Curbs
+      const diyaSpacing = 4.0;
+      const diyaCount = Math.floor(length / diyaSpacing);
+      for (let d = 0; d < diyaCount; d++) {
+        const dz = -length * 0.5 + d * diyaSpacing + 2.0;
+        const diyaGroup = this.createDiyaMesh();
+        diyaGroup.position.set(side * (roadW * 0.5 + 0.175), 0.28, dz);
+        group.add(diyaGroup);
+      }
+    });
+
+    // 3. Scattered Festive Flower Petals on Asphalt Surface
+    const petalGeo = new THREE.CircleGeometry(0.08, 5);
+    petalGeo.rotateX(-Math.PI * 0.5);
+    for (let p = 0; p < 24; p++) {
+      const pColor = Math.random() > 0.5 ? this.petalMatOrange : (Math.random() > 0.5 ? this.petalMatYellow : this.petalMatRose);
+      const petal = new THREE.Mesh(petalGeo, pColor);
+      const px = (Math.random() - 0.5) * (roadW - 1.2);
+      const pz = (Math.random() - 0.5) * (length - 2.0);
+      petal.position.set(px, 0.015, pz);
+      petal.rotation.y = Math.random() * Math.PI * 2;
+      group.add(petal);
+    }
+
+    return { group: group, z: z, length: length };
+  }
+
+  createDiyaMesh() {
+    const diya = new THREE.Group();
+
+    // Clay Bowl (Terracotta)
+    const bowlGeo = new THREE.CylinderGeometry(0.11, 0.06, 0.07, 8);
+    const bowl = new THREE.Mesh(bowlGeo, this.diyaClayMat);
+    bowl.position.y = 0.035;
+    diya.add(bowl);
+
+    // Miniature Golden Flame
+    const flameGeo = new THREE.ConeGeometry(0.045, 0.09, 6);
+    const flame = new THREE.Mesh(flameGeo, this.diyaFlameMat);
+    flame.position.y = 0.10;
+    diya.add(flame);
+
+    return diya;
+  }
+
+  createRangoliMesh() {
+    const rGroup = new THREE.Group();
+    const ring1 = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.8, 16), this.rangoliMat);
+    ring1.rotation.x = -Math.PI * 0.5;
+    rGroup.add(ring1);
+    return rGroup;
+  }
+
+  createUrliMesh() {
+    const urli = new THREE.Group();
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.4, 0.3, 12), this.urliMat);
+    bowl.position.y = 0.15;
+    urli.add(bowl);
+    return urli;
+  }
+
+  reset() {
+    const length = (typeof CONFIG !== 'undefined' && CONFIG.ROAD_SEGMENT_LENGTH) ? CONFIG.ROAD_SEGMENT_LENGTH : 40.0;
+    for (let i = 0; i < this.segments.length; i++) {
+      this.segments[i].group.position.z = -i * length + 40.0;
+    }
+  }
+
+  update(moveDist) {
+    const count = this.segments.length;
+    const length = (typeof CONFIG !== 'undefined' && CONFIG.ROAD_SEGMENT_LENGTH) ? CONFIG.ROAD_SEGMENT_LENGTH : 40.0;
+    const totalSpan = count * length;
+
+    for (let i = 0; i < count; i++) {
+      const seg = this.segments[i];
+      seg.group.position.z += moveDist;
+
+      if (seg.group.position.z > 40.0) {
+        seg.group.position.z -= totalSpan;
+      }
+    }
+  }
+}
+
+
+
+// ============================================================================
+// 5. TRUE 3D PLAYER CHARACTER (Stylized Human Devotee Runner with Anatomical Geometry)
+// ============================================================================
+class Player3D {
+  constructor(game) {
+    this.game = game;
+    this.scene = game.three.scene;
+
+    // Single Authoritative Lane Variable (0: Left, 1: Center, 2: Right)
+    this.targetLane = 1;
+    this.lane = 1;          // Kept synchronized for full backward compatibility
+    this.currentX = 0;      // Interpolated 3D X coordinate
+    this.jumpY = 0;         // Vertical height off ground
     this.velocityY = 0;
     this.isJumping = false;
     this.isSliding = false;
     this.slideTimer = 0;
     this.runCycle = 0;
     this.invulnerableTimer = 0;
-    this.trailType = 'sparkle';
 
-    this.baseWidth = 84;
-    this.baseHeight = 120;
+    // PBR-Style Materials - Authentic Indian Festival Devotee Palette
+    this.skinMat = new THREE.MeshStandardMaterial({
+      color: 0xba7d56, // Natural warm Indian skin tone
+      roughness: 0.58,
+      metalness: 0.02
+    });
+
+    this.kurtaMat = new THREE.MeshStandardMaterial({
+      color: 0xfffefb, // Pure ivory raw silk with realistic fabric matte
+      roughness: 0.52,
+      metalness: 0.02
+    });
+
+    this.kurtaTrimMat = new THREE.MeshStandardMaterial({
+      color: 0xffd152, // Golden zari embroidered border & button accents
+      roughness: 0.30,
+      metalness: 0.80,
+      emissive: 0x92400e,
+      emissiveIntensity: 0.25
+    });
+
+    this.dhotiMat = new THREE.MeshStandardMaterial({
+      color: 0xea580c, // Ceremonial saffron orange cloth
+      roughness: 0.60,
+      metalness: 0.03
+    });
+
+    this.hairMat = new THREE.MeshStandardMaterial({
+      color: 0x14100c, // Dark cropped hair
+      roughness: 0.88
+    });
+
+    this.turbanMat = new THREE.MeshStandardMaterial({
+      color: 0xd9480f, // Deep festive saffron pagdi cloth
+      roughness: 0.58,
+      metalness: 0.05
+    });
+
+    this.goldMat = new THREE.MeshStandardMaterial({
+      color: 0xffd152, // Polished gold kada (bangles) & kalgi brooch
+      metalness: 0.88,
+      roughness: 0.18,
+      emissive: 0x78350f,
+      emissiveIntensity: 0.15
+    });
+
+    this.shoeMat = new THREE.MeshStandardMaterial({
+      color: 0x3d1708, // Traditional burnished leather Mojari
+      roughness: 0.46,
+      metalness: 0.15
+    });
+
+    this.buildCharacterMesh();
+  }
+
+  createSoftShadowTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 60);
+    grad.addColorStop(0.0, 'rgba(0, 0, 0, 0.65)');
+    grad.addColorStop(0.5, 'rgba(0, 0, 0, 0.32)');
+    grad.addColorStop(0.85, 'rgba(0, 0, 0, 0.08)');
+    grad.addColorStop(1.0, 'rgba(0, 0, 0, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 128);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
+  }
+
+  buildCharacterMesh() {
+    this.group = new THREE.Group();
+    this.group.position.set(0, 0, 0);
+
+    // Hero scaling factor (+18% for heroic presence and clear gameplay readability)
+    this.group.scale.set(1.18, 1.18, 1.18);
+
+    // 1. Soft Dynamic Radial Drop Shadow (Smooth circular gradient, NO rectangular box!)
+    const shadowGeo = new THREE.PlaneGeometry(1.6, 1.6);
+    const shadowMat = new THREE.MeshBasicMaterial({
+      map: this.createSoftShadowTexture(),
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false
+    });
+    this.shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+    this.shadowMesh.rotation.x = -Math.PI * 0.5;
+    this.shadowMesh.position.y = 0.02;
+    this.group.add(this.shadowMesh);
+
+    // 2. Character Body Root Hierarchy (Centered at hips)
+    this.bodyGroup = new THREE.Group();
+    this.bodyGroup.position.y = 0.94; // Natural human hip height
+    this.group.add(this.bodyGroup);
+
+    // ---------------- Pelvis & Saffron Pleated Dhoti ----------------
+    this.pelvis = new THREE.Group();
+    this.bodyGroup.add(this.pelvis);
+
+    // Anatomical Pelvis contour
+    const pelvisGeo = new THREE.CylinderGeometry(0.24, 0.20, 0.30, 14);
+    const pelvisMesh = new THREE.Mesh(pelvisGeo, this.dhotiMat);
+    pelvisMesh.position.y = -0.05;
+    pelvisMesh.castShadow = true;
+    this.pelvis.add(pelvisMesh);
+
+    // Front Central Kashta Pleat Drape with subtle taper
+    const kashtaGeo = new THREE.BoxGeometry(0.14, 0.44, 0.12);
+    const kashta = new THREE.Mesh(kashtaGeo, this.dhotiMat);
+    kashta.position.set(0, -0.16, 0.13);
+    this.pelvis.add(kashta);
+
+    // Kashta Gold Zari Border
+    const kashtaZariGeo = new THREE.BoxGeometry(0.15, 0.04, 0.13);
+    const kashtaZari = new THREE.Mesh(kashtaZariGeo, this.kurtaTrimMat);
+    kashtaZari.position.set(0, -0.37, 0.13);
+    this.pelvis.add(kashtaZari);
+
+    // ---------------- Upper Torso & Ivory Silk Kurta ----------------
+    this.torso = new THREE.Group();
+    this.torso.position.y = 0.12;
+    this.bodyGroup.add(this.torso);
+
+    // Anatomical Chest & Waist with natural athletic taper
+    const chestGeo = new THREE.CylinderGeometry(0.26, 0.21, 0.54, 14);
+    this.torsoMesh = new THREE.Mesh(chestGeo, this.kurtaMat);
+    this.torsoMesh.position.y = 0.27;
+    this.torsoMesh.castShadow = true;
+    this.torso.add(this.torsoMesh);
+
+    // Kurta Lower Skirt Flare (covering upper thighs naturally)
+    const skirtGeo = new THREE.CylinderGeometry(0.23, 0.28, 0.36, 14);
+    const skirt = new THREE.Mesh(skirtGeo, this.kurtaMat);
+    skirt.position.y = -0.02;
+    skirt.castShadow = true;
+    this.torso.add(skirt);
+
+    // Gold Zari Hem Border along lower edge of Kurta
+    const hemZariGeo = new THREE.CylinderGeometry(0.282, 0.285, 0.045, 14);
+    const hemZari = new THREE.Mesh(hemZariGeo, this.kurtaTrimMat);
+    hemZari.position.y = -0.19;
+    this.torso.add(hemZari);
+
+    // Central Placket with Gold Buttons
+    const placketGeo = new THREE.BoxGeometry(0.05, 0.38, 0.03);
+    const placket = new THREE.Mesh(placketGeo, this.kurtaMat);
+    placket.position.set(0, 0.30, 0.24);
+    this.torso.add(placket);
+
+    for (let b = 0; b < 3; b++) {
+      const buttonGeo = new THREE.SphereGeometry(0.016, 8, 8);
+      const button = new THREE.Mesh(buttonGeo, this.goldMat);
+      button.position.set(0, 0.40 - b * 0.10, 0.258);
+      this.torso.add(button);
+    }
+
+    // Mandarin Nehru Collar
+    const collarGeo = new THREE.CylinderGeometry(0.12, 0.13, 0.08, 12);
+    const collar = new THREE.Mesh(collarGeo, this.kurtaMat);
+    collar.position.y = 0.55;
+    this.torso.add(collar);
+
+    // ---------------- Head, Face, Turban & Features ----------------
+    this.headGroup = new THREE.Group();
+    this.headGroup.position.y = 0.64;
+    this.torso.add(this.headGroup);
+
+    // Anatomical Tapered Neck
+    const neckGeo = new THREE.CylinderGeometry(0.09, 0.105, 0.14, 12);
+    const neck = new THREE.Mesh(neckGeo, this.skinMat);
+    neck.position.y = -0.05;
+    neck.castShadow = true;
+    this.headGroup.add(neck);
+
+    // Sculpted Head Cranium & Jawline
+    const craniumGeo = new THREE.SphereGeometry(0.19, 16, 14);
+    craniumGeo.scale(1.0, 1.15, 1.05);
+    const cranium = new THREE.Mesh(craniumGeo, this.skinMat);
+    cranium.position.set(0, 0.11, 0);
+    cranium.castShadow = true;
+    this.headGroup.add(cranium);
+
+    // Jaw & Chin Definition
+    const jawGeo = new THREE.ConeGeometry(0.13, 0.16, 8);
+    jawGeo.rotateX(Math.PI);
+    const jaw = new THREE.Mesh(jawGeo, this.skinMat);
+    jaw.position.set(0, 0.02, 0.05);
+    this.headGroup.add(jaw);
+
+    // 3D Nose Bridge & Tip
+    const noseGeo = new THREE.ConeGeometry(0.032, 0.09, 6);
+    noseGeo.rotateX(-Math.PI * 0.42);
+    const nose = new THREE.Mesh(noseGeo, this.skinMat);
+    nose.position.set(0, 0.11, 0.195);
+    this.headGroup.add(nose);
+
+    // Left & Right Anatomical Ears with Helix & Lobe
+    [-1, 1].forEach(side => {
+      const earGroup = new THREE.Group();
+      earGroup.position.set(side * 0.185, 0.11, -0.01);
+
+      const earGeo = new THREE.SphereGeometry(0.045, 8, 8);
+      earGeo.scale(0.4, 1.1, 0.8);
+      const earMesh = new THREE.Mesh(earGeo, this.skinMat);
+      earGroup.add(earMesh);
+
+      const earringGeo = new THREE.TorusGeometry(0.018, 0.006, 6, 12);
+      const earring = new THREE.Mesh(earringGeo, this.goldMat);
+      earring.position.set(0, -0.04, 0);
+      earGroup.add(earring);
+
+      this.headGroup.add(earGroup);
+    });
+
+    // Dark Cropped Hair under Turban
+    const hairGeo = new THREE.SphereGeometry(0.198, 14, 12);
+    hairGeo.scale(1.02, 1.05, 1.08);
+    const hair = new THREE.Mesh(hairGeo, this.hairMat);
+    hair.position.set(0, 0.13, -0.03);
+    this.headGroup.add(hair);
+
+    // Red Vermilion Tilak / Chandlo on Forehead
+    const tilakGeo = new THREE.BoxGeometry(0.022, 0.065, 0.015);
+    const tilakMat = new THREE.MeshBasicMaterial({ color: 0xd90429 });
+    const tilak = new THREE.Mesh(tilakGeo, tilakMat);
+    tilak.position.set(0, 0.17, 0.192);
+    this.headGroup.add(tilak);
+
+    // White Chandan Arc below Tilak
+    const chandanGeo = new THREE.BoxGeometry(0.055, 0.016, 0.015);
+    const chandanMat = new THREE.MeshBasicMaterial({ color: 0xfffbeb });
+    const chandan = new THREE.Mesh(chandanGeo, chandanMat);
+    chandan.position.set(0, 0.135, 0.192);
+    this.headGroup.add(chandan);
+
+    // ---------------- Multi-Layer Wrapped Saffron Pagdi (Turban) ----------------
+    this.turbanGroup = new THREE.Group();
+    this.turbanGroup.position.set(0, 0.22, 0);
+    this.headGroup.add(this.turbanGroup);
+
+    // Tier 1 Base Band Wrap (Slightly tilted festival wrap)
+    const tBand1 = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.065, 12, 24), this.turbanMat);
+    tBand1.rotation.x = Math.PI * 0.46;
+    tBand1.rotation.y = 0.08;
+    tBand1.castShadow = true;
+    this.turbanGroup.add(tBand1);
+
+    // Tier 2 Middle Wrap Fold
+    const tBand2 = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.07, 12, 24), this.turbanMat);
+    tBand2.position.set(0, 0.07, -0.01);
+    tBand2.rotation.x = Math.PI * 0.48;
+    tBand2.rotation.y = -0.06;
+    tBand2.castShadow = true;
+    this.turbanGroup.add(tBand2);
+
+    // Tier 3 Top Crown Dome
+    const tDome = new THREE.Mesh(new THREE.SphereGeometry(0.19, 14, 12), this.turbanMat);
+    tDome.scale.set(1.05, 0.85, 1.15);
+    tDome.position.set(0, 0.09, -0.02);
+    tDome.castShadow = true;
+    this.turbanGroup.add(tDome);
+
+    // Front Central Turban Rosette Pleat Knot
+    const knotGeo = new THREE.SphereGeometry(0.065, 10, 10);
+    knotGeo.scale(1.2, 0.8, 0.9);
+    const knot = new THREE.Mesh(knotGeo, this.turbanMat);
+    knot.position.set(0, 0.04, 0.195);
+    this.turbanGroup.add(knot);
+
+    // Royal Golden Kalgi (Turban Brooch) with Ruby Gemstone
+    const kalgiBaseGeo = new THREE.CylinderGeometry(0.035, 0.02, 0.07, 8);
+    const kalgiBase = new THREE.Mesh(kalgiBaseGeo, this.goldMat);
+    kalgiBase.position.set(0, 0.08, 0.205);
+    this.turbanGroup.add(kalgiBase);
+
+    // Ruby Centerpiece
+    const rubyGeo = new THREE.SphereGeometry(0.022, 8, 8);
+    const rubyMat = new THREE.MeshStandardMaterial({
+      color: 0x9f1239,
+      roughness: 0.15,
+      metalness: 0.35,
+      emissive: 0x881337,
+      emissiveIntensity: 0.35
+    });
+    const ruby = new THREE.Mesh(rubyGeo, rubyMat);
+    ruby.position.set(0, 0.08, 0.225);
+    this.turbanGroup.add(ruby);
+
+    // Golden Kalgi Feathers / Plume Sprig
+    const plumeGeo = new THREE.ConeGeometry(0.038, 0.18, 6);
+    plumeGeo.rotateZ(0.12);
+    const plume = new THREE.Mesh(plumeGeo, this.goldMat);
+    plume.position.set(0.015, 0.20, 0.195);
+    this.turbanGroup.add(plume);
+
+    // ---------------- Articulated Arms, Sleeves & Hands ----------------
+    this.leftShoulder = new THREE.Group();
+    this.leftShoulder.position.set(-0.29, 0.44, 0);
+    this.torso.add(this.leftShoulder);
+
+    const upperArmGeo = new THREE.CylinderGeometry(0.085, 0.072, 0.32, 10);
+    const upperArmL = new THREE.Mesh(upperArmGeo, this.kurtaMat);
+    upperArmL.position.y = -0.15;
+    upperArmL.castShadow = true;
+    this.leftShoulder.add(upperArmL);
+
+    this.leftElbow = new THREE.Group();
+    this.leftElbow.position.set(0, -0.30, 0);
+    this.leftShoulder.add(this.leftElbow);
+
+    const forearmGeo = new THREE.CylinderGeometry(0.072, 0.062, 0.28, 10);
+    const forearmL = new THREE.Mesh(forearmGeo, this.kurtaMat);
+    forearmL.position.y = -0.13;
+    forearmL.castShadow = true;
+    this.leftElbow.add(forearmL);
+
+    const kadaGeo = new THREE.TorusGeometry(0.068, 0.014, 8, 16);
+    const kadaL = new THREE.Mesh(kadaGeo, this.goldMat);
+    kadaL.rotation.x = Math.PI * 0.5;
+    kadaL.position.y = -0.26;
+    this.leftElbow.add(kadaL);
+
+    const handL = new THREE.Group();
+    handL.position.set(0, -0.30, 0);
+
+    const palmL = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.10, 0.05), this.skinMat);
+    palmL.position.y = -0.04;
+    palmL.castShadow = true;
+    handL.add(palmL);
+
+    const fingersL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.07, 0.04), this.skinMat);
+    fingersL.position.set(0, -0.105, 0.005);
+    handL.add(fingersL);
+
+    const thumbL = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.016, 0.065, 6), this.skinMat);
+    thumbL.rotation.z = 0.6;
+    thumbL.position.set(0.045, 0.02, 0.03);
+    handL.add(thumbL);
+    this.leftElbow.add(handL);
+
+    // Right Arm
+    this.rightShoulder = new THREE.Group();
+    this.rightShoulder.position.set(0.29, 0.44, 0);
+    this.torso.add(this.rightShoulder);
+
+    const upperArmR = new THREE.Mesh(upperArmGeo, this.kurtaMat);
+    upperArmR.position.y = -0.15;
+    upperArmR.castShadow = true;
+    this.rightShoulder.add(upperArmR);
+
+    this.rightElbow = new THREE.Group();
+    this.rightElbow.position.set(0, -0.30, 0);
+    this.rightShoulder.add(this.rightElbow);
+
+    const forearmR = new THREE.Mesh(forearmGeo, this.kurtaMat);
+    forearmR.position.y = -0.13;
+    forearmR.castShadow = true;
+    this.rightElbow.add(forearmR);
+
+    const kadaR = new THREE.Mesh(kadaGeo, this.goldMat);
+    kadaR.rotation.x = Math.PI * 0.5;
+    kadaR.position.y = -0.26;
+    this.rightElbow.add(kadaR);
+
+    const handR = new THREE.Group();
+    handR.position.set(0, -0.30, 0);
+
+    const palmR = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.10, 0.05), this.skinMat);
+    palmR.position.y = -0.04;
+    palmR.castShadow = true;
+    handR.add(palmR);
+
+    const fingersR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.07, 0.04), this.skinMat);
+    fingersR.position.set(0, -0.105, 0.005);
+    handR.add(fingersR);
+
+    const thumbR = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.016, 0.065, 6), this.skinMat);
+    thumbR.rotation.z = -0.6;
+    thumbR.position.set(-0.045, 0.02, 0.03);
+    handR.add(thumbR);
+    this.rightElbow.add(handR);
+
+    // ---------------- Articulated Legs & Traditional Mojaris ----------------
+    this.leftHip = new THREE.Group();
+    this.leftHip.position.set(-0.18, -0.15, 0);
+    this.pelvis.add(this.leftHip);
+
+    const thighGeo = new THREE.CylinderGeometry(0.14, 0.11, 0.42, 10);
+    const thighL = new THREE.Mesh(thighGeo, this.dhotiMat);
+    thighL.position.y = -0.19;
+    thighL.castShadow = true;
+    this.leftHip.add(thighL);
+
+    this.leftKnee = new THREE.Group();
+    this.leftKnee.position.set(0, -0.40, 0);
+    this.leftHip.add(this.leftKnee);
+
+    const calfGeo = new THREE.CylinderGeometry(0.11, 0.075, 0.40, 10);
+    const calfL = new THREE.Mesh(calfGeo, this.dhotiMat);
+    calfL.position.y = -0.18;
+    calfL.castShadow = true;
+    this.leftKnee.add(calfL);
+
+    this.leftFoot = new THREE.Group();
+    this.leftFoot.position.set(0, -0.38, 0.04);
+    this.leftKnee.add(this.leftFoot);
+
+    const mojariBodyGeo = new THREE.BoxGeometry(0.15, 0.11, 0.34);
+    const mojariL = new THREE.Mesh(mojariBodyGeo, this.shoeMat);
+    mojariL.position.set(0, 0, 0.02);
+    this.leftFoot.add(mojariL);
+
+    const toeCurlGeo = new THREE.ConeGeometry(0.055, 0.13, 6);
+    toeCurlGeo.rotateX(-Math.PI * 0.4);
+    const toeCurlL = new THREE.Mesh(toeCurlGeo, this.goldMat);
+    toeCurlL.position.set(0, 0.04, 0.20);
+    this.leftFoot.add(toeCurlL);
+
+    // Right Leg
+    this.rightHip = new THREE.Group();
+    this.rightHip.position.set(0.18, -0.15, 0);
+    this.pelvis.add(this.rightHip);
+
+    const thighR = new THREE.Mesh(thighGeo, this.dhotiMat);
+    thighR.position.y = -0.19;
+    thighR.castShadow = true;
+    this.rightHip.add(thighR);
+
+    this.rightKnee = new THREE.Group();
+    this.rightKnee.position.set(0, -0.40, 0);
+    this.rightHip.add(this.rightKnee);
+
+    const calfR = new THREE.Mesh(calfGeo, this.dhotiMat);
+    calfR.position.y = -0.18;
+    calfR.castShadow = true;
+    this.rightKnee.add(calfR);
+
+    this.rightFoot = new THREE.Group();
+    this.rightFoot.position.set(0, -0.38, 0.04);
+    this.rightKnee.add(this.rightFoot);
+
+    const mojariR = new THREE.Mesh(mojariBodyGeo, this.shoeMat);
+    mojariR.position.set(0, 0, 0.02);
+    this.rightFoot.add(mojariR);
+
+    const toeCurlR = new THREE.Mesh(toeCurlGeo, this.goldMat);
+    toeCurlR.position.set(0, 0.04, 0.20);
+    this.rightFoot.add(toeCurlR);
+
+    // ---------------- 4. POLISHED DIVINE BLESSING SHIELD (Vibrant power-up aura, NO wireframe!) ----------------
+    this.shieldGroup = new THREE.Group();
+    this.shieldGroup.position.y = 1.0;
+    this.shieldGroup.visible = false;
+
+    // A. Vibrant Translucent Energy Dome with Additive Glow
+    const shieldSphereGeo = new THREE.SphereGeometry(0.95, 32, 24);
+    const shieldSphereMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.28,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    this.shieldSphere = new THREE.Mesh(shieldSphereGeo, shieldSphereMat);
+    this.shieldGroup.add(this.shieldSphere);
+
+    // B. Soft Glowing Amber Rim Shell
+    const rimGeo = new THREE.SphereGeometry(0.98, 32, 24);
+    const rimMat = new THREE.MeshBasicMaterial({
+      color: 0xfacc15,
+      transparent: true,
+      opacity: 0.24,
+      side: THREE.BackSide,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    this.shieldRim = new THREE.Mesh(rimGeo, rimMat);
+    this.shieldGroup.add(this.shieldRim);
+
+    // C. Glowing Equatorial Energy Orbit Ring
+    const ringGeo = new THREE.TorusGeometry(1.02, 0.035, 12, 36);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xffd152,
+      transparent: true,
+      opacity: 0.65,
+      blending: THREE.AdditiveBlending
+    });
+    this.shieldOrbitRing = new THREE.Mesh(ringGeo, ringMat);
+    this.shieldOrbitRing.rotation.x = Math.PI * 0.35;
+    this.shieldGroup.add(this.shieldOrbitRing);
+
+    // D. Orbiting Golden Energy Sparkles
+    const pCount = 24;
+    const pGeo = new THREE.BufferGeometry();
+    const pPos = new Float32Array(pCount * 3);
+    for (let i = 0; i < pCount; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI;
+      pPos[i * 3] = 0.95 * Math.sin(phi) * Math.cos(theta);
+      pPos[i * 3 + 1] = 0.95 * Math.cos(phi);
+      pPos[i * 3 + 2] = 0.95 * Math.sin(phi) * Math.sin(theta);
+    }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+    const pMat = new THREE.PointsMaterial({
+      color: 0xffe082,
+      size: 0.35,
+      transparent: true,
+      opacity: 0.90,
+      blending: THREE.AdditiveBlending
+    });
+    this.shieldParticles = new THREE.Points(pGeo, pMat);
+    this.shieldGroup.add(this.shieldParticles);
+
+    this.group.add(this.shieldGroup);
+    this.shieldMesh = this.shieldGroup;
+
+    // ---------------- Boost Power-Up Effect ----------------
+    const boostGeo = new THREE.ConeGeometry(0.65, 1.8, 12);
+    const boostMat = new THREE.MeshBasicMaterial({
+      color: 0xffd152,
+      transparent: true,
+      opacity: 0.55
+    });
+    this.boostMesh = new THREE.Mesh(boostGeo, boostMat);
+    this.boostMesh.rotation.x = Math.PI * 0.5;
+    this.boostMesh.position.set(0, 1.0, 1.4);
+    this.boostMesh.visible = false;
+    this.group.add(this.boostMesh);
+
+    this.scene.add(this.group);
   }
 
   reset() {
     this.lane = 1;
-    this.currentLaneX = 0;
+    this.currentX = 0;
     this.jumpY = 0;
     this.velocityY = 0;
     this.isJumping = false;
@@ -670,85 +1504,113 @@ class Player {
     this.slideTimer = 0;
     this.runCycle = 0;
     this.invulnerableTimer = 0;
+    this.targetLane = 1;
+    this.lane = 1;
+    this.currentX = 0;
+    this.group.position.set(0, 0, (typeof CONFIG !== 'undefined' && CONFIG.PLAYER_Z !== undefined) ? CONFIG.PLAYER_Z : 0);
+    this.group.rotation.set(0, 0, 0);
+    this.shieldGroup.visible = false;
+  }
+
+  // CENTRAL AUTHORITATIVE MOVEMENT FUNCTION (Phase 1 Requirement)
+  // direction = -1 for Left, +1 for Right
+  movePlayer(direction) {
+    if (direction === -1) {
+      if (this.targetLane > 0) {
+        this.targetLane--;
+        this.lane = this.targetLane;
+        if (this.game && this.game.audio) this.game.audio.play('whoosh');
+        return true;
+      }
+    } else if (direction === 1) {
+      if (this.targetLane < 2) {
+        this.targetLane++;
+        this.lane = this.targetLane;
+        if (this.game && this.game.audio) this.game.audio.play('whoosh');
+        return true;
+      }
+    }
+    return false;
   }
 
   moveLeft() {
-    if (this.lane > 0) {
-      this.lane--;
-      this.game.audio.playClick();
-    }
+    return this.movePlayer(-1);
   }
 
   moveRight() {
-    if (this.lane < 2) {
-      this.lane++;
-      this.game.audio.playClick();
-    }
+    return this.movePlayer(1);
   }
 
   jump() {
-    if (!this.isJumping) {
+    if (!this.isJumping && !this.isSliding) {
       this.isJumping = true;
-      this.velocityY = CONFIG.JUMP_FORCE;
-      this.isSliding = false;
-      this.slideTimer = 0;
-      this.game.audio.playJump();
-
-      const proj = this.game.perspective.project(this.currentLaneX, 0, 0);
-      this.game.particles.spawn(proj.x, proj.y, 16, {
-        colors: ['#ffd152', '#ffba08', '#e2e8f0'],
-        minSpeed: 1,
-        maxSpeed: 4,
-        minSize: 2,
-        maxSize: 4
-      });
+      this.velocityY = (typeof CONFIG !== 'undefined' && CONFIG.JUMP_FORCE) ? CONFIG.JUMP_FORCE : 14.5;
+      if (this.game && this.game.audio) this.game.audio.play('jump');
+      return true;
     }
+    return false;
   }
 
   slide() {
-    if (this.isJumping) {
-      this.velocityY = -26.0;
-      this.game.audio.playSlide();
-    } else if (!this.isSliding) {
+    if (!this.isSliding) {
+      if (this.isJumping) {
+        this.velocityY = -18;
+      }
       this.isSliding = true;
-      this.slideTimer = CONFIG.SLIDE_DURATION;
-      this.game.audio.playSlide();
+      this.slideTimer = (typeof CONFIG !== 'undefined' && CONFIG.SLIDE_DURATION) ? CONFIG.SLIDE_DURATION : 0.60;
+      if (this.game && this.game.audio) this.game.audio.play('slide');
+      return true;
+    }
+    return false;
+  }
 
-      const proj = this.game.perspective.project(this.currentLaneX, 0, 0);
-      this.game.particles.spawn(proj.x, proj.y, 18, {
-        colors: ['#ff8426', '#ffd152', '#ffffff'],
-        minSpeed: 2,
-        maxSpeed: 6,
-        shape: 'spark'
-      });
+  setShield(active) {
+    if (this.shieldGroup) {
+      this.shieldGroup.visible = !!active;
     }
   }
 
   update(dt) {
-    const targetX = this.lane - 1;
-    this.currentLaneX += (targetX - this.currentLaneX) * Math.min(1.0, CONFIG.LANE_LERP_SPEED * dt);
+    // 1. Horizontal Smooth Lane Interpolation (Responsive & Crisp Easing)
+    this.targetLane = Math.max(0, Math.min(2, Math.round(this.targetLane)));
+    this.lane = this.targetLane;
 
+    const lanePositions = (typeof CONFIG !== 'undefined' && Array.isArray(CONFIG.LANES))
+      ? CONFIG.LANES
+      : [-3.2, 0, 3.2];
+    const targetX = lanePositions[this.targetLane];
+
+    const snapSpeed = 18.0;
+    this.currentX += (targetX - this.currentX) * Math.min(1.0, snapSpeed * dt);
+    this.group.position.x = this.currentX;
+
+    // Subtle Bank / Lean into turn
+    const bankTarget = (targetX - this.currentX) * -0.15;
+    this.group.rotation.z += (bankTarget - this.group.rotation.z) * 14.0 * dt;
+
+    // 2. Vertical Jump & Gravity Physics
     if (this.isJumping) {
-      this.jumpY += this.velocityY * 60 * dt;
-      this.velocityY += CONFIG.GRAVITY * dt;
+      this.jumpY += this.velocityY * dt;
+      const grav = (typeof CONFIG !== 'undefined' && CONFIG.GRAVITY) ? CONFIG.GRAVITY : -36.0;
+      this.velocityY += grav * dt;
 
       if (this.jumpY <= 0) {
         this.jumpY = 0;
         this.velocityY = 0;
         this.isJumping = false;
-        this.game.audio.playLand();
-
-        const proj = this.game.perspective.project(this.currentLaneX, 0, 0);
-        this.game.particles.spawn(proj.x, proj.y, 16, {
-          colors: ['#ffd152', '#ff8426', '#e2e8f0'],
-          minSpeed: 2,
-          maxSpeed: 5,
-          angle: Math.PI * 1.5,
-          angleSpread: 1.2
-        });
       }
     }
+    this.group.position.y = this.jumpY;
 
+    // Dynamic Shadow Scaling with Height
+    if (this.shadowMesh) {
+      const maxH = (typeof CONFIG !== 'undefined' && CONFIG.MAX_JUMP_HEIGHT) ? CONFIG.MAX_JUMP_HEIGHT : 2.8;
+      const sScale = Math.max(0.4, 1.0 - (this.jumpY / maxH) * 0.55);
+      this.shadowMesh.scale.set(sScale, sScale, sScale);
+      this.shadowMesh.material.opacity = Math.max(0.12, 0.85 - (this.jumpY / maxH) * 0.55);
+    }
+
+    // 3. Slide Timer & Posture
     if (this.isSliding) {
       this.slideTimer -= dt;
       if (this.slideTimer <= 0) {
@@ -757,329 +1619,211 @@ class Player {
       }
     }
 
-    const speedRatio = this.game.speed / CONFIG.BASE_SPEED;
-    this.runCycle += 12 * speedRatio * dt;
-
+    // 4. Invulnerability Blink
     if (this.invulnerableTimer > 0) {
       this.invulnerableTimer -= dt;
-    }
-
-    // Trail particles
-    if (Math.random() < 0.6) {
-      const proj = this.game.perspective.project(this.currentLaneX, this.jumpY * 1.5, 0);
-      let colors = ['#ffd152', '#ffba08'];
-      let shape = 'circle';
-      if (this.trailType === 'marigold') {
-        colors = ['#ff8426', '#ffba08', '#d62828'];
-        shape = 'petal';
-      } else if (this.trailType === 'kumkum') {
-        colors = ['#d62828', '#ff6b1a', '#ffbe53'];
-        shape = 'spark';
-      } else if (this.trailType === 'diya') {
-        colors = ['#ffbe53', '#ff6b1a', '#ffffff'];
-        shape = 'circle';
+      this.group.visible = Math.floor(Date.now() / 60) % 2 === 0;
+      if (this.invulnerableTimer <= 0) {
+        this.group.visible = true;
       }
-      this.game.particles.spawn(proj.x + (Math.random() - 0.5) * 16, proj.y - 10, 2, {
-        colors: colors,
-        shape: shape,
-        minSpeed: 0.5,
-        maxSpeed: 2.0,
-        minSize: 2,
-        maxSize: 5,
-        minDecay: 0.03,
-        maxDecay: 0.05
-      });
-    }
-  }
-
-  render(ctx) {
-    const proj = this.game.perspective.project(this.currentLaneX, this.jumpY * 1.5, 0);
-    const px = proj.x;
-    const py = proj.y;
-    const scale = proj.scale;
-
-    if (this.invulnerableTimer > 0 && Math.floor(Date.now() / 80) % 2 === 0) {
-      return;
+    } else {
+      this.group.visible = true;
     }
 
-    ctx.save();
-    ctx.translate(px, py);
-
-    // Ground Shadow
-    const shadowScale = Math.max(0.3, 1.0 - (this.jumpY / 80));
-    ctx.save();
-    ctx.scale(scale * shadowScale, scale * shadowScale * 0.4);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-    ctx.beginPath();
-    ctx.ellipse(0, (this.jumpY * 1.5) / (shadowScale * 0.4), 38, 18, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.scale(scale, scale);
-
-    const targetX = this.lane - 1;
-    const laneTilt = (targetX - this.currentLaneX) * 0.22;
-    ctx.rotate(laneTilt);
-
-    const runBounce = this.isJumping ? 0 : Math.sin(this.runCycle) * 3.5;
-    const legAngle = this.isJumping ? 0.35 : Math.sin(this.runCycle) * 0.65;
+    // 5. Procedural Human Running & Athletic Animation
+    const speedRatio = (this.game && this.game.speed && CONFIG.BASE_SPEED) ? (this.game.speed / CONFIG.BASE_SPEED) : 1.0;
+    this.runCycle += 13.5 * speedRatio * dt;
 
     if (this.isSliding) {
-      // Sliding Posture
-      ctx.fillStyle = 'rgba(255, 209, 82, 0.3)';
-      ctx.beginPath();
-      ctx.ellipse(-10, -8, 40, 14, -0.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#ff8426';
-      ctx.beginPath();
-      ctx.ellipse(-15, -18, 26, 12, -0.3, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#fff7eb';
-      ctx.beginPath();
-      ctx.ellipse(12, -26, 24, 14, 0.4, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#ffd152';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(12, -26, 15, 0, Math.PI);
-      ctx.stroke();
-
-      ctx.fillStyle = '#e0a876';
-      ctx.beginPath();
-      ctx.arc(28, -36, 12, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#d62828';
-      ctx.beginPath();
-      ctx.arc(28, -42, 11, Math.PI, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffd152';
-      ctx.beginPath();
-      ctx.moveTo(34, -48);
-      ctx.lineTo(39, -56);
-      ctx.lineTo(31, -48);
-      ctx.fill();
-
+      this.bodyGroup.position.y = 0.38;
+      this.bodyGroup.rotation.x = -0.72;
+      this.torso.rotation.x = -0.15;
+      this.leftHip.rotation.x = 0.95;
+      this.rightHip.rotation.x = 0.95;
+      this.leftKnee.rotation.x = 0.85;
+      this.rightKnee.rotation.x = 0.85;
+      this.leftShoulder.rotation.x = 0.85;
+      this.rightShoulder.rotation.x = 0.85;
+    } else if (this.isJumping) {
+      this.bodyGroup.position.y = 0.94;
+      this.bodyGroup.rotation.x = 0.05;
+      this.torso.rotation.x = 0.05;
+      this.leftHip.rotation.x = -0.45;
+      this.rightHip.rotation.x = 0.35;
+      this.leftKnee.rotation.x = 0.75;
+      this.rightKnee.rotation.x = 0.25;
+      this.leftShoulder.rotation.x = -0.90;
+      this.rightShoulder.rotation.x = 0.80;
     } else {
-      // Running Posture
-      ctx.save();
-      ctx.translate(0, -32 + runBounce);
+      const legSin = Math.sin(this.runCycle);
+      const armSin = -legSin;
 
-      // Left Leg
-      ctx.save();
-      ctx.rotate(legAngle);
-      ctx.fillStyle = '#ff6b1a';
-      ctx.beginPath();
-      ctx.roundRect(-16, 0, 12, 32, 6);
-      ctx.fill();
-      ctx.fillStyle = '#ffd152';
-      ctx.fillRect(-16, 26, 12, 6);
-      ctx.fillStyle = '#7a3e1d';
-      ctx.fillRect(-18, 30, 16, 6);
-      ctx.restore();
+      this.bodyGroup.position.y = 0.94 + Math.abs(legSin) * 0.08;
+      this.bodyGroup.rotation.x = 0.12;
+      this.bodyGroup.rotation.y = legSin * 0.07;
+      this.torso.rotation.y = -legSin * 0.06;
+      this.torso.rotation.z = legSin * 0.035;
 
-      // Right Leg
-      ctx.save();
-      ctx.rotate(-legAngle);
-      ctx.fillStyle = '#e85d04';
-      ctx.beginPath();
-      ctx.roundRect(4, 0, 12, 32, 6);
-      ctx.fill();
-      ctx.fillStyle = '#ffd152';
-      ctx.fillRect(4, 26, 12, 6);
-      ctx.fillStyle = '#7a3e1d';
-      ctx.fillRect(4, 30, 16, 6);
-      ctx.restore();
+      this.headGroup.rotation.x = -0.05;
+      this.headGroup.rotation.y = -legSin * 0.035;
 
-      ctx.restore();
+      this.leftHip.rotation.x = legSin * 0.65;
+      this.rightHip.rotation.x = -legSin * 0.65;
 
-      // Torso
-      ctx.save();
-      ctx.translate(0, -68 + runBounce);
+      this.leftKnee.rotation.x = (legSin < 0) ? -legSin * 0.85 : 0.12;
+      this.rightKnee.rotation.x = (legSin > 0) ? legSin * 0.85 : 0.12;
 
-      // Fluttering Sash
-      ctx.fillStyle = '#ffd152';
-      ctx.beginPath();
-      const sashWave = Math.sin(this.runCycle * 1.5) * 8;
-      ctx.moveTo(-16, 8);
-      ctx.quadraticCurveTo(-34 + sashWave, 24, -28 + sashWave, 42);
-      ctx.lineTo(-20 + sashWave, 40);
-      ctx.quadraticCurveTo(-26 + sashWave, 22, -10, 12);
-      ctx.closePath();
-      ctx.fill();
+      this.leftFoot.rotation.x = (legSin > 0) ? -0.15 : 0.35;
+      this.rightFoot.rotation.x = (legSin < 0) ? -0.15 : 0.35;
 
-      ctx.fillStyle = '#fff7eb';
-      ctx.beginPath();
-      ctx.roundRect(-18, -4, 36, 42, [8, 8, 4, 4]);
-      ctx.fill();
+      this.leftShoulder.rotation.x = armSin * 0.72;
+      this.rightShoulder.rotation.x = -armSin * 0.72;
 
-      ctx.strokeStyle = '#ffd152';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(0, -2);
-      ctx.lineTo(0, 36);
-      ctx.stroke();
+      this.leftShoulder.rotation.z = -0.12 - Math.abs(armSin) * 0.08;
+      this.rightShoulder.rotation.z = 0.12 + Math.abs(armSin) * 0.08;
 
-      ctx.fillStyle = '#d62828';
-      ctx.beginPath();
-      ctx.arc(0, 8, 2.5, 0, Math.PI * 2);
-      ctx.arc(0, 18, 2.5, 0, Math.PI * 2);
-      ctx.arc(0, 28, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Arms
-      const armAngle = -legAngle * 0.8;
-      ctx.save();
-      ctx.translate(-18, 2);
-      ctx.rotate(armAngle);
-      ctx.fillStyle = '#fff7eb';
-      ctx.fillRect(-4, 0, 8, 24);
-      ctx.fillStyle = '#e0a876';
-      ctx.beginPath();
-      ctx.arc(0, 26, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      ctx.save();
-      ctx.translate(18, 2);
-      ctx.rotate(-armAngle);
-      ctx.fillStyle = '#fff7eb';
-      ctx.fillRect(-4, 0, 8, 24);
-      ctx.fillStyle = '#e0a876';
-      ctx.beginPath();
-      ctx.arc(0, 26, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffba08';
-      ctx.beginPath();
-      ctx.arc(2, 28, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      // Head & Turban
-      ctx.translate(0, -16);
-      ctx.fillStyle = '#e0a876';
-      ctx.beginPath();
-      ctx.arc(0, 0, 13, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#d62828';
-      ctx.fillRect(-1.5, -6, 3, 7);
-      ctx.fillStyle = '#ffd152';
-      ctx.fillRect(-1, -1, 2, 2);
-
-      ctx.fillStyle = '#ff6b1a';
-      ctx.beginPath();
-      ctx.arc(0, -5, 14, Math.PI, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#d62828';
-      ctx.beginPath();
-      ctx.ellipse(0, -7, 15, 6, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffd152';
-      ctx.beginPath();
-      ctx.moveTo(0, -13);
-      ctx.lineTo(4, -22);
-      ctx.lineTo(-4, -22);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.restore();
+      this.leftElbow.rotation.x = -0.85 - armSin * 0.35;
+      this.rightElbow.rotation.x = -0.85 + armSin * 0.35;
     }
 
-    // Power-Up Auras
-    if (this.game.powerUps.hasShield) {
-      const shieldPulse = Math.sin(Date.now() * 0.008) * 4;
-      ctx.save();
-      ctx.translate(0, -50);
-      ctx.strokeStyle = 'rgba(255, 209, 82, 0.85)';
-      ctx.lineWidth = 3;
-      ctx.shadowColor = '#ffd152';
-      ctx.shadowBlur = 15;
-      ctx.beginPath();
-      ctx.arc(0, 0, 48 + shieldPulse, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.fillStyle = 'rgba(255, 209, 82, 0.15)';
-      ctx.fill();
-
-      for (let m = 0; m < 8; m++) {
-        const rad = (m * Math.PI) / 4 + (Date.now() * 0.002);
-        const sx = Math.cos(rad) * (48 + shieldPulse);
-        const sy = Math.sin(rad) * (48 + shieldPulse);
-        ctx.fillStyle = '#ffd152';
-        ctx.beginPath();
-        ctx.arc(sx, sy, 3, 0, Math.PI * 2);
-        ctx.fill();
+    // Power-Up Aura Updates: Soft pulse and orbit for Shield
+    const hasShield = (this.game && this.game.powerUps && this.game.powerUps.hasShield);
+    if (this.shieldGroup) {
+      this.shieldGroup.visible = hasShield;
+      if (hasShield) {
+        const pulse = 1.0 + Math.sin(Date.now() * 0.006) * 0.04;
+        this.shieldGroup.scale.set(pulse, pulse, pulse);
+        this.shieldGroup.rotation.y += 1.4 * dt;
+        if (this.shieldOrbitRing) {
+          this.shieldOrbitRing.rotation.z += 2.2 * dt;
+        }
+        if (this.shieldParticles) {
+          this.shieldParticles.rotation.y -= 2.0 * dt;
+        }
       }
-      ctx.restore();
     }
 
-    if (this.game.powerUps.isMagnetActive) {
-      ctx.save();
-      ctx.translate(0, -50);
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      const waveOffset = (Date.now() * 0.05) % 24;
-      ctx.arc(0, 0, 36 + waveOffset, -Math.PI * 0.7, -Math.PI * 0.3);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(0, 0, 48 + waveOffset, -Math.PI * 0.7, -Math.PI * 0.3);
-      ctx.stroke();
-      ctx.restore();
+    if (this.game && this.game.powerUps) {
+      this.boostMesh.visible = !!this.game.powerUps.isBoostActive;
+      if (this.boostMesh.visible) {
+        this.boostMesh.scale.set(
+          1.0 + Math.random() * 0.15,
+          1.0 + Math.random() * 0.25,
+          1.0 + Math.random() * 0.15
+        );
+      }
     }
-
-    if (this.game.powerUps.isBoostActive) {
-      ctx.save();
-      ctx.translate(0, -50);
-      ctx.strokeStyle = '#ffd152';
-      ctx.lineWidth = 4;
-      ctx.shadowColor = '#ff6b1a';
-      ctx.shadowBlur = 20;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 54, 70, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    ctx.restore();
   }
 }
 
-// ----------------------------------------------------------------------------
-// 6. OBSTACLE MANAGER (Fair Spawner & 5 Distinct Types)
-// ----------------------------------------------------------------------------
-class ObstacleManager {
+
+
+// ============================================================================
+// 6. TRUE 3D OBSTACLES (Proper Perspective Scaling, No Giant Camera Blockers)
+// ============================================================================
+class Obstacle3DManager {
   constructor(game) {
     this.game = game;
+    this.scene = game.three.scene;
     this.obstacles = [];
     this.spawnDistanceCounter = 0;
-    this.minWaveGap = 210;
+    this.minWaveGap = 34.0;
+
+    // Shared Reusable Materials
+    this.materials = {
+      autoYellow: new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.35, metalness: 0.12 }),
+      autoGreen: new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.45 }),
+      truckBody: new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.45 }),
+      metalBlack: new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.55 }),
+      tireRubber: new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.85 }),
+      silverChrome: new THREE.MeshStandardMaterial({ color: 0xe5e7eb, metalness: 0.85, roughness: 0.18 }),
+      woodDark: new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.72 }),
+      woodLight: new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.65 }),
+      dholCrimson: new THREE.MeshStandardMaterial({ color: 0xd62828, roughness: 0.52 }),
+      dholHead: new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.62 }),
+      goldTrim: new THREE.MeshStandardMaterial({ color: 0xffd152, metalness: 0.75, roughness: 0.25 }),
+      marigoldOrange: new THREE.MeshBasicMaterial({ color: 0xff6b1a }),
+      marigoldYellow: new THREE.MeshBasicMaterial({ color: 0xffd152 }),
+      roseRed: new THREE.MeshBasicMaterial({ color: 0xd62828 }),
+      headlightGlow: new THREE.MeshBasicMaterial({ color: 0xfffbeb }),
+      hazardBar: new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.52 }),
+      drummerSkin: new THREE.MeshStandardMaterial({ color: 0xba7d56, roughness: 0.60 }),
+      drummerKurta: new THREE.MeshStandardMaterial({ color: 0xfff9ef, roughness: 0.65 }),
+      drummerPagdi: new THREE.MeshStandardMaterial({ color: 0xe05619, roughness: 0.60 })
+    };
+    // Object Pool for Obstacles (Eliminates GC stutter & runtime mesh allocations)
+    this.pool = {
+      'AUTO_RICKSHAW': [],
+      'MINI_TRUCK': [],
+      'DHOL_CART': [],
+      'FLOWER_CART': [],
+      'BARRICADE': [],
+      'TORAN': []
+    };
+    this.initPool();
+  }
+
+  initPool() {
+    const types = ['AUTO_RICKSHAW', 'MINI_TRUCK', 'DHOL_CART', 'FLOWER_CART', 'BARRICADE', 'TORAN'];
+    types.forEach(t => {
+      for (let k = 0; k < 6; k++) {
+        const mesh = this.buildObstacleMesh(t);
+        mesh.visible = false;
+        mesh.userData.inUse = false;
+        mesh.position.set(0, -200, 0);
+        this.scene.add(mesh);
+        this.pool[t].push(mesh);
+      }
+    });
+  }
+
+  getPooledMesh(type) {
+    let list = this.pool[type];
+    if (!list) {
+      list = [];
+      this.pool[type] = list;
+    }
+    let mesh = list.find(m => !m.userData.inUse);
+    if (!mesh) {
+      // Gracefully expand pool if needed (strict zero collision/sharing)
+      mesh = this.buildObstacleMesh(type);
+      mesh.visible = false;
+      mesh.position.set(0, -200, 0);
+      this.scene.add(mesh);
+      list.push(mesh);
+    }
+    mesh.userData.inUse = true;
+    mesh.visible = true;
+    return mesh;
+  }
+
+  releaseObstacle(obs) {
+    if (obs && obs.mesh) {
+      obs.mesh.visible = false;
+      obs.mesh.userData.inUse = false;
+      obs.mesh.position.set(0, -200, 0);
+    }
   }
 
   reset() {
+    this.obstacles.forEach(obs => {
+      this.releaseObstacle(obs);
+    });
     this.obstacles = [];
+    for (const key in this.pool) {
+      this.pool[key].forEach(m => {
+        m.visible = false;
+        m.userData.inUse = false;
+        m.position.set(0, -200, 0);
+      });
+    }
     this.spawnDistanceCounter = 0;
   }
 
-  update(dt) {
-    const moveDist = this.game.speed * dt;
+  update(dt, moveDist) {
     this.spawnDistanceCounter += moveDist;
 
-    if (this.game.state === 'DESTINATION_CELEBRATION') {
-      for (let i = this.obstacles.length - 1; i >= 0; i--) {
-        this.obstacles[i].z -= moveDist;
-        if (this.obstacles[i].z < -60) this.obstacles.splice(i, 1);
-      }
-      return;
-    }
-
-    const currentWaveGap = this.minWaveGap + (this.game.speed - CONFIG.BASE_SPEED) * 0.55;
+    const currentWaveGap = this.minWaveGap + (this.game.speed - CONFIG.BASE_SPEED) * 0.45;
     if (this.spawnDistanceCounter >= currentWaveGap) {
       this.spawnDistanceCounter = 0;
       this.spawnWave();
@@ -1087,27 +1831,31 @@ class ObstacleManager {
 
     for (let i = this.obstacles.length - 1; i >= 0; i--) {
       const obs = this.obstacles[i];
-      obs.z -= moveDist;
+      obs.mesh.position.z += moveDist;
 
-      if (!obs.nearMissChecked && obs.z < 0 && obs.z > -40) {
+      // Near Miss Detection: Thrilling rewards for dodging adjacent lane or jumping/sliding past
+      if (!obs.nearMissChecked && obs.mesh.position.z > -0.5 && obs.mesh.position.z < 2.5 && !obs.hit) {
         obs.nearMissChecked = true;
-        const laneDiff = Math.abs(this.game.player.currentLaneX - (obs.lane - 1));
-        if (laneDiff < 0.85 && !obs.hit) {
+        const laneDiff = Math.abs(this.game.player.currentX - CONFIG.LANES[obs.lane]);
+        const dodgedAdjacent = (laneDiff > 1.8 && laneDiff < 3.8);
+        const jumpedOrSlidOver = (laneDiff < 1.4 && (this.game.player.jumpY > 1.1 || this.game.player.isSliding));
+        if (dodgedAdjacent || jumpedOrSlidOver) {
           this.game.triggerNearMiss(obs);
         }
       }
 
-      if (obs.z < -60) {
+      // Clean Despawn behind player: Return to pool at z > 4.5 (NEVER enters near camera at z = 9.6)
+      if (obs.mesh.position.z > 4.5) {
+        this.releaseObstacle(obs);
         this.obstacles.splice(i, 1);
       }
     }
   }
 
   spawnWave() {
-    const obstacleTypes = ['BARRICADE', 'DHOL', 'TORAN', 'CRATES', 'CART'];
+    const types = ['AUTO_RICKSHAW', 'MINI_TRUCK', 'DHOL_CART', 'FLOWER_CART', 'BARRICADE', 'TORAN'];
     const safeLane = Math.floor(Math.random() * 3);
-
-    const allowTwo = this.game.distance > 400 && Math.random() < 0.45;
+    const allowTwo = this.game.distance > 350 && Math.random() < 0.45;
     const occupiedLanes = [];
 
     for (let lane = 0; lane < 3; lane++) {
@@ -1118,551 +1866,1776 @@ class ObstacleManager {
     }
 
     occupiedLanes.forEach(lane => {
-      let type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
-      if (type === 'TORAN' && this.game.distance < 300) {
+      let type = types[Math.floor(Math.random() * types.length)];
+      if (type === 'TORAN' && this.game.distance < 200) {
         type = 'BARRICADE';
       }
+
+      const mesh = this.getPooledMesh(type);
+      mesh.position.set(CONFIG.LANES[lane], 0, CONFIG.SPAWN_Z);
+      mesh.visible = true;
 
       this.obstacles.push({
         type: type,
         lane: lane,
-        z: CONFIG.ROAD_LENGTH,
+        mesh: mesh,
         hit: false,
-        nearMissChecked: false,
-        baseWidth: 64,
-        baseHeight: type === 'TORAN' ? 85 : 55
+        nearMissChecked: false
       });
     });
   }
 
-  render(ctx) {
-    const sorted = [...this.obstacles].sort((a, b) => b.z - a.z);
+  buildObstacleMesh(type) {
+    switch (type) {
+      case 'AUTO_RICKSHAW':
+        return this.createAutoRickshaw();
+      case 'MINI_TRUCK':
+        return this.createMiniTruck();
+      case 'DHOL_CART':
+        return this.createDholCart();
+      case 'FLOWER_CART':
+        return this.createFlowerCart();
+      case 'TORAN':
+        return this.createToranPortal();
+      case 'BARRICADE':
+      default:
+        return this.createBarricade();
+    }
+  }
 
-    sorted.forEach(obs => {
-      const laneX = obs.lane - 1;
-      const proj = this.game.perspective.project(laneX, 0, obs.z);
-      const scale = proj.scale;
-      const x = proj.x;
-      const y = proj.y;
+  // Properly Proportioned Indian Auto-Rickshaw (No giant camera obstruction)
+  createAutoRickshaw() {
+    const group = new THREE.Group();
 
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(scale, scale);
+    // Green Lower Chassis
+    const lowerGeo = new THREE.BoxGeometry(1.8, 0.8, 2.6);
+    const lower = new THREE.Mesh(lowerGeo, this.materials.autoGreen);
+    lower.position.y = 0.58;
+    lower.castShadow = true;
+    lower.receiveShadow = true;
+    group.add(lower);
 
-      switch (obs.type) {
-        case 'BARRICADE':
-          this.renderBarricade(ctx);
-          break;
-        case 'DHOL':
-          this.renderDhol(ctx);
-          break;
-        case 'TORAN':
-          this.renderToran(ctx);
-          break;
-        case 'CRATES':
-          this.renderCrates(ctx);
-          break;
-        case 'CART':
-          this.renderCart(ctx);
-          break;
-      }
-      ctx.restore();
+    // Yellow Canopy Roof
+    const roofGeo = new THREE.BoxGeometry(1.7, 0.75, 2.2);
+    const roof = new THREE.Mesh(roofGeo, this.materials.autoYellow);
+    roof.position.set(0, 1.30, -0.12);
+    roof.castShadow = true;
+    group.add(roof);
+
+    // Windshield
+    const glassGeo = new THREE.BoxGeometry(1.5, 0.65, 0.08);
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.60 });
+    const glass = new THREE.Mesh(glassGeo, glassMat);
+    glass.position.set(0, 1.22, 1.0);
+    group.add(glass);
+
+    // 3 Wheels
+    const wheelGeo = new THREE.CylinderGeometry(0.30, 0.30, 0.18, 14);
+    wheelGeo.rotateZ(Math.PI * 0.5);
+
+    const wheelFront = new THREE.Mesh(wheelGeo, this.materials.tireRubber);
+    wheelFront.position.set(0, 0.30, 1.05);
+    group.add(wheelFront);
+
+    const wheelRearL = new THREE.Mesh(wheelGeo, this.materials.tireRubber);
+    wheelRearL.position.set(-0.90, 0.30, -0.75);
+    group.add(wheelRearL);
+
+    const wheelRearR = new THREE.Mesh(wheelGeo, this.materials.tireRubber);
+    wheelRearR.position.set(0.90, 0.30, -0.75);
+    group.add(wheelRearR);
+
+    // Glowing Round Headlight (Subtle soft glow, no giant 7m beam covering screen)
+    const lightGeo = new THREE.SphereGeometry(0.14, 10, 10);
+    const headlight = new THREE.Mesh(lightGeo, this.materials.headlightGlow);
+    headlight.position.set(0, 0.65, 1.32);
+    group.add(headlight);
+
+    // Marigold Garland draped across bumper
+    const garlandGeo = new THREE.TorusGeometry(0.72, 0.07, 8, 14, Math.PI);
+    garlandGeo.rotateX(Math.PI * 0.5);
+    const garland = new THREE.Mesh(garlandGeo, this.materials.marigoldOrange);
+    garland.position.set(0, 0.62, 1.30);
+    group.add(garland);
+
+    return group;
+  }
+
+  createMiniTruck() {
+    const group = new THREE.Group();
+
+    // Driver Cab
+    const cabGeo = new THREE.BoxGeometry(2.0, 1.5, 1.5);
+    const cab = new THREE.Mesh(cabGeo, this.materials.silverChrome);
+    cab.position.set(0, 1.05, 1.0);
+    cab.castShadow = true;
+    group.add(cab);
+
+    // Windshield
+    const winGeo = new THREE.BoxGeometry(1.8, 0.65, 0.08);
+    const winMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 });
+    const win = new THREE.Mesh(winGeo, winMat);
+    win.position.set(0, 1.28, 1.76);
+    group.add(win);
+
+    // Flatbed Cargo Area
+    const bedGeo = new THREE.BoxGeometry(2.1, 0.55, 2.4);
+    const bed = new THREE.Mesh(bedGeo, this.materials.truckBody);
+    bed.position.set(0, 0.62, -0.75);
+    bed.castShadow = true;
+    group.add(bed);
+
+    // 4 Wheels
+    const wheelGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.22, 14);
+    wheelGeo.rotateZ(Math.PI * 0.5);
+    [
+      { x: -1.05, z: 1.0 }, { x: 1.05, z: 1.0 },
+      { x: -1.05, z: -1.0 }, { x: 1.05, z: -1.0 }
+    ].forEach(p => {
+      const w = new THREE.Mesh(wheelGeo, this.materials.tireRubber);
+      w.position.set(p.x, 0.34, p.z);
+      group.add(w);
     });
+
+    // Dual Headlights
+    [-0.65, 0.65].forEach(hx => {
+      const hl = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), this.materials.headlightGlow);
+      hl.position.set(hx, 0.70, 1.76);
+      group.add(hl);
+    });
+
+    // Marigold Garlands on Grill
+    const garlandGeo = new THREE.TorusGeometry(0.85, 0.07, 8, 14, Math.PI);
+    garlandGeo.rotateX(Math.PI * 0.5);
+    const garland = new THREE.Mesh(garlandGeo, this.materials.marigoldOrange);
+    garland.position.set(0, 0.70, 1.76);
+    group.add(garland);
+
+    // LIVE 3D DHOL DRUMMER ON FLATBED
+    const drummerGroup = new THREE.Group();
+    drummerGroup.position.set(0, 0.90, -0.75);
+
+    const dTorso = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.60, 10), this.materials.drummerKurta);
+    dTorso.position.y = 0.60;
+    dTorso.castShadow = true;
+    drummerGroup.add(dTorso);
+
+    const dHead = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), this.materials.drummerSkin);
+    dHead.position.y = 1.04;
+    drummerGroup.add(dHead);
+
+    const dPagdi = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.18, 12), this.materials.drummerPagdi);
+    dPagdi.position.y = 1.14;
+    drummerGroup.add(dPagdi);
+
+    // Giant Bass Dhol Drum
+    const dholGeo = new THREE.CylinderGeometry(0.44, 0.44, 1.1, 16);
+    dholGeo.rotateZ(Math.PI * 0.5);
+    const dhol = new THREE.Mesh(dholGeo, this.materials.dholCrimson);
+    dhol.position.set(0, 0.60, 0.40);
+    drummerGroup.add(dhol);
+
+    [-0.56, 0.56].forEach(dx => {
+      const head = new THREE.Mesh(new THREE.CircleGeometry(0.42, 14), this.materials.dholHead);
+      head.rotateY(dx > 0 ? Math.PI * 0.5 : -Math.PI * 0.5);
+      head.position.set(dx, 0.60, 0.40);
+      drummerGroup.add(head);
+    });
+
+    group.add(drummerGroup);
+
+    return group;
   }
 
-  renderBarricade(ctx) {
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 38, 10, 0, 0, Math.PI * 2);
-    ctx.fill();
+  createDholCart() {
+    const group = new THREE.Group();
 
-    // Wooden upright posts with brass caps
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(-30, -52, 9, 52);
-    ctx.fillRect(21, -52, 9, 52);
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-32, -56, 13, 5);
-    ctx.fillRect(19, -56, 13, 5);
+    const baseGeo = new THREE.BoxGeometry(2.1, 0.32, 2.5);
+    const base = new THREE.Mesh(baseGeo, this.materials.woodDark);
+    base.position.y = 0.60;
+    base.castShadow = true;
+    group.add(base);
 
-    // Crossbars with yellow/black hazard chevrons
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(-36, -48, 72, 14);
-    ctx.fillRect(-36, -26, 72, 12);
+    const wheelGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.15, 16);
+    wheelGeo.rotateZ(Math.PI * 0.5);
+    [-1.15, 1.15].forEach(wx => {
+      const w = new THREE.Mesh(wheelGeo, this.materials.woodLight);
+      w.position.set(wx, 0.55, 0);
+      w.castShadow = true;
+      group.add(w);
+    });
 
-    // Diagonal hazard stripes on upper bar
-    ctx.fillStyle = '#ffd152';
-    for (let c = -32; c <= 28; c += 16) {
-      ctx.beginPath();
-      ctx.moveTo(c, -48);
-      ctx.lineTo(c + 8, -48);
-      ctx.lineTo(c, -34);
-      ctx.lineTo(c - 8, -34);
-      ctx.closePath();
-      ctx.fill();
-    }
+    [-0.50, 0.50].forEach(dx => {
+      const dholGeo = new THREE.CylinderGeometry(0.50, 0.50, 1.5, 14);
+      dholGeo.rotateX(Math.PI * 0.5);
+      const dhol = new THREE.Mesh(dholGeo, this.materials.woodDark);
+      dhol.position.set(dx, 1.25, 0);
+      dhol.castShadow = true;
+      group.add(dhol);
 
-    // Sacred Marigold Garland draped across top bar
-    for (let g = -32; g <= 32; g += 8) {
-      ctx.fillStyle = (g % 16 === 0) ? '#ffd152' : '#ff8426';
-      ctx.beginPath();
-      ctx.arc(g, -50 + Math.sin(g * 0.15) * 3, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
+      [-0.76, 0.76].forEach(hz => {
+        const head = new THREE.Mesh(new THREE.CircleGeometry(0.48, 14), this.materials.dholHead);
+        if (hz < 0) head.rotateY(Math.PI);
+        head.position.set(dx, 1.25, hz);
+        group.add(head);
+      });
+    });
+
+    const drape = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.45, 1.6), this.materials.dholCrimson);
+    drape.position.set(0, 1.0, 0);
+    group.add(drape);
+
+    return group;
   }
 
-  renderDhol(ctx) {
-    // Contact Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 36, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
+  createFlowerCart() {
+    const group = new THREE.Group();
 
-    // Wooden Stand
-    ctx.strokeStyle = '#5c2c16';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(-24, 0); ctx.lineTo(-14, -22); ctx.lineTo(-4, 0);
-    ctx.moveTo(4, 0); ctx.lineTo(14, -22); ctx.lineTo(24, 0);
-    ctx.stroke();
+    const cartGeo = new THREE.BoxGeometry(2.0, 0.32, 2.4);
+    const cart = new THREE.Mesh(cartGeo, this.materials.woodLight);
+    cart.position.y = 0.52;
+    cart.castShadow = true;
+    group.add(cart);
 
-    // Barrel Body (Deep Teak Wood with Saffron Sheen)
-    ctx.fillStyle = '#78350f';
-    ctx.beginPath();
-    ctx.ellipse(0, -34, 32, 19, 0, 0, Math.PI * 2);
-    ctx.fill();
+    const wheelGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.12, 14);
+    wheelGeo.rotateZ(Math.PI * 0.5);
+    [
+      { x: -1.05, z: 0.75 }, { x: 1.05, z: 0.75 },
+      { x: -1.05, z: -0.75 }, { x: 1.05, z: -0.75 }
+    ].forEach(p => {
+      const w = new THREE.Mesh(wheelGeo, this.materials.woodDark);
+      w.position.set(p.x, 0.32, p.z);
+      group.add(w);
+    });
 
-    // Left and Right Leather Drumheads with Brass Rims
-    ctx.fillStyle = '#f8fafc';
-    ctx.beginPath();
-    ctx.ellipse(-28, -34, 6.5, 17, 0, 0, Math.PI * 2);
-    ctx.ellipse(28, -34, 6.5, 17, 0, 0, Math.PI * 2);
-    ctx.fill();
+    const baskets = [
+      { x: -0.50, z: 0.45, color: this.materials.marigoldOrange },
+      { x: 0.50, z: 0.45, color: this.materials.marigoldYellow },
+      { x: 0, z: -0.45, color: this.materials.roseRed }
+    ];
 
-    // Brass Tension Rings
+    baskets.forEach(b => {
+      const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.28, 0.32, 10), this.materials.woodDark);
+      basket.position.set(b.x, 0.82, b.z);
+      group.add(basket);
+
+      const mound = new THREE.Mesh(new THREE.SphereGeometry(0.36, 8, 8), b.color);
+      mound.position.set(b.x, 1.02, b.z);
+      group.add(mound);
+    });
+
+    return group;
+  }
+
+  createToranPortal() {
+    const group = new THREE.Group();
+
+    // Bamboo Side Posts
+    [-1.4, 1.4].forEach(px => {
+      const poleGeo = new THREE.CylinderGeometry(0.09, 0.09, 3.6, 8);
+      const pole = new THREE.Mesh(poleGeo, this.materials.woodLight);
+      pole.position.set(px, 1.8, 0);
+      pole.castShadow = true;
+      group.add(pole);
+
+      const finial = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), this.materials.goldTrim);
+      finial.position.set(px, 3.7, 0);
+      group.add(finial);
+    });
+
+    // Hanging Garland Arch (Slide under)
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.16, 0.16), this.materials.woodDark);
+    beam.position.set(0, 2.5, 0);
+    group.add(beam);
+
+    const banner = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.45, 0.04), this.materials.marigoldOrange);
+    banner.position.set(0, 2.2, 0);
+    group.add(banner);
+
+    for (let f = -1.1; f <= 1.1; f += 0.38) {
+      const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.32, 6), this.materials.marigoldYellow);
+      tassel.position.set(f, 1.85, 0);
+      group.add(tassel);
+    }
+
+    return group;
+  }
+
+  createBarricade() {
+    const group = new THREE.Group();
+
+    const legGeo = new THREE.BoxGeometry(0.14, 1.3, 0.14);
+    [-1.1, 1.1].forEach(lx => {
+      const leg1 = new THREE.Mesh(legGeo, this.materials.metalBlack);
+      leg1.position.set(lx, 0.65, -0.28);
+      leg1.rotation.x = 0.2;
+      group.add(leg1);
+
+      const leg2 = new THREE.Mesh(legGeo, this.materials.metalBlack);
+      leg2.position.set(lx, 0.65, 0.28);
+      leg2.rotation.x = -0.2;
+      group.add(leg2);
+    });
+
+    const boardGeo = new THREE.BoxGeometry(2.6, 0.32, 0.08);
+    const board1 = new THREE.Mesh(boardGeo, this.materials.hazardBar);
+    board1.position.set(0, 1.05, 0);
+    board1.castShadow = true;
+    group.add(board1);
+
+    const board2 = new THREE.Mesh(boardGeo, this.materials.hazardBar);
+    board2.position.set(0, 0.58, 0);
+    board2.castShadow = true;
+    group.add(board2);
+
+    const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.22, 8), this.materials.marigoldYellow);
+    lamp.position.set(0, 1.32, 0);
+    group.add(lamp);
+
+    return group;
+  }
+}
+
+
+
+// ============================================================================
+// 7. TRUE 3D ENVIRONMENT (Varied Havelis, 3D Shop Products, Crowds & Pandal)
+// ============================================================================
+class Environment3DManager {
+  constructor(game) {
+    this.game = game;
+    this.scene = game.three.scene;
+    this.clusters = [];
+    this.overheadWires = [];
+    this.fireworks = [];
+    this.driftingPetals = [];
+    this.animatedDrummers = [];
+
+    // Module configuration: Continuous 16m modules along both sides (272m span)
+    this.moduleLength = 16.0;
+    this.moduleCount = 17;
+
+    // Shared Materials Palette - Authentic Heritage Indian Festival Architecture
+    this.materials = {
+      wallSandstone: new THREE.MeshStandardMaterial({ color: 0xc8965e, roughness: 0.65 }),
+      wallTerracotta: new THREE.MeshStandardMaterial({ color: 0xb5512d, roughness: 0.64 }),
+      wallCrimson: new THREE.MeshStandardMaterial({ color: 0x822137, roughness: 0.62 }),
+      wallOchre: new THREE.MeshStandardMaterial({ color: 0xa47035, roughness: 0.66 }),
+      wallRose: new THREE.MeshStandardMaterial({ color: 0x8e354f, roughness: 0.62 }),
+      wallWhiteTrim: new THREE.MeshStandardMaterial({ color: 0xf5eee4, roughness: 0.52 }),
+      wallTeak: new THREE.MeshStandardMaterial({ color: 0x482310, roughness: 0.68 }),
+      wallWhitewash: new THREE.MeshStandardMaterial({ color: 0xded8ce, roughness: 0.70 }),
+      canopyOrange: new THREE.MeshStandardMaterial({ color: 0xe65100, roughness: 0.48 }),
+      canopyGold: new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.42 }),
+      canopyCrimson: new THREE.MeshStandardMaterial({ color: 0x9f1239, roughness: 0.45 }),
+      canopyGreen: new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.45 }),
+      windowGlow: new THREE.MeshStandardMaterial({
+        color: 0xfef08a,
+        emissive: 0xf59e0b,
+        emissiveIntensity: 0.85,
+        roughness: 0.25
+      }),
+      windowFrame: new THREE.MeshStandardMaterial({ color: 0x2e1408, roughness: 0.78 }),
+      goldFinial: new THREE.MeshStandardMaterial({
+        color: 0xffd152,
+        metalness: 0.88,
+        roughness: 0.18,
+        emissive: 0x78350f,
+        emissiveIntensity: 0.20
+      }),
+      brassMetal: new THREE.MeshStandardMaterial({
+        color: 0xfacc15,
+        metalness: 0.82,
+        roughness: 0.20,
+        emissive: 0x713f12,
+        emissiveIntensity: 0.18
+      }),
+      silverMetal: new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 0.85, roughness: 0.18 }),
+      crowdKurtaSaffron: new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.60 }),
+      crowdKurtaWhite: new THREE.MeshStandardMaterial({ color: 0xfffefb, roughness: 0.55 }),
+      crowdKurtaMaroon: new THREE.MeshStandardMaterial({ color: 0x9f1239, roughness: 0.60 }),
+      crowdSareeMagenta: new THREE.MeshStandardMaterial({ color: 0xe879f9, roughness: 0.58 }),
+      crowdSareeGreen: new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.58 }),
+      crowdSareeGold: new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.55 }),
+      crowdSareeRoyalBlue: new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.58 }),
+      crowdDhoti: new THREE.MeshStandardMaterial({ color: 0xfefbf3, roughness: 0.65 }),
+      skin: new THREE.MeshStandardMaterial({ color: 0xba7d56, roughness: 0.55 }),
+      hairDark: new THREE.MeshStandardMaterial({ color: 0x14100c, roughness: 0.88 }),
+      marigoldOrange: new THREE.MeshBasicMaterial({ color: 0xff6b1a }),
+      marigoldYellow: new THREE.MeshBasicMaterial({ color: 0xffd152 }),
+      roseRed: new THREE.MeshBasicMaterial({ color: 0xdc2626 }),
+      kandilGlow: new THREE.MeshBasicMaterial({ color: 0xff3366 }),
+      bulbGlowWarm: new THREE.MeshBasicMaterial({ color: 0xfff3a1 }),
+      flagOrange: new THREE.MeshBasicMaterial({ color: 0xff6b1a }),
+      flagYellow: new THREE.MeshBasicMaterial({ color: 0xfacc15 }),
+      distantCityMat: new THREE.MeshBasicMaterial({ color: 0x181432 })
+    };
+
+    // Procedural Devanagari Signboard Textures
+    this.signTextures = {
+      modak: this.createSignboardTexture('मोदक', 'MODAK SWEETS', '#881337', '#fef08a'),
+      sweets: this.createSignboardTexture('श्री गणेश स्वीट्स', 'SHREE GANESH SWEETS', '#78350f', '#facc15'),
+      morya: this.createSignboardTexture('गणपति बाप्पा मोरया', 'GANPATI BAPPA MORYA', '#9a3412', '#fef08a'),
+      flowers: this.createSignboardTexture('फूल भंडार', 'FLOWER BAZAAR', '#831843', '#fef08a'),
+      puja: this.createSignboardTexture('पूजा साहित्य', 'POOJA EMPORIUM', '#701a75', '#fde047'),
+      chai: this.createSignboardTexture('अमृततुल्य चाय', 'SPECIAL CHAI & SNACKS', '#451a03', '#fde047')
+    };
+
+    this.initContinuousStreet();
+    this.initOverheadCanopies();
+    this.initDriftingPetals();
+    this.initDistantCityscape();
+    this.createGrandGaneshPandal();
+    this.initFireworksPool();
+  }
+
+  createSignboardTexture(mainText, subText, bgColor, textColor) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 160;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, 512, 160);
+
     ctx.strokeStyle = '#ffd152';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.ellipse(-28, -34, 6.5, 17, 0, 0, Math.PI * 2);
-    ctx.ellipse(28, -34, 6.5, 17, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Zig-Zag Leather Tension Ropes
-    ctx.strokeStyle = '#ffd152';
+    ctx.lineWidth = 7;
+    ctx.strokeRect(8, 8, 496, 144);
+    ctx.strokeStyle = '#fffbeb';
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-26, -46); ctx.lineTo(26, -22);
-    ctx.moveTo(-26, -22); ctx.lineTo(26, -46);
-    ctx.moveTo(-16, -48); ctx.lineTo(16, -20);
-    ctx.moveTo(-16, -20); ctx.lineTo(16, -48);
-    ctx.stroke();
+    ctx.strokeRect(16, 16, 480, 128);
 
-    // Ceremonial Red & Gold Kolhapuri Dupatta draped over Dhol
-    ctx.fillStyle = '#dc2626';
-    ctx.beginPath();
-    ctx.moveTo(-12, -49);
-    ctx.quadraticCurveTo(0, -56, 12, -49);
-    ctx.lineTo(8, -32);
-    ctx.quadraticCurveTo(0, -36, -8, -32);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-6, -34, 12, 3);
-  }
-
-  renderToran(ctx) {
-    // Carved Golden Bamboo Posts
-    ctx.fillStyle = '#ca8a04';
-    ctx.fillRect(-42, -130, 9, 130);
-    ctx.fillRect(33, -130, 9, 130);
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-44, -134, 13, 6);
-    ctx.fillRect(31, -134, 13, 6);
-
-    // Decorative Lintel Bar
-    ctx.fillStyle = '#b91c1c';
-    ctx.fillRect(-48, -130, 96, 16);
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-48, -132, 96, 3);
-    ctx.fillRect(-48, -116, 96, 3);
-
-    // Ornate Center Sun Medallion
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(0, -130, 16, Math.PI, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#dc2626';
-    ctx.beginPath();
-    ctx.arc(0, -130, 8, Math.PI, Math.PI * 2);
-    ctx.fill();
-
-    // Sagging Marigold Garlands with Mango Leaves (Curved Toran)
-    const hangingY = -112;
-    for (let m = -40; m <= 40; m += 10) {
-      const sag = Math.sin((m + 40) / 80 * Math.PI) * 12;
-      ctx.fillStyle = (m % 20 === 0) ? '#ffd152' : '#ff8426';
-      ctx.beginPath();
-      ctx.arc(m, hangingY + sag, 5.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Mango Leaves hanging between flowers
-      if (m % 20 === 0) {
-        ctx.fillStyle = '#15803d';
-        ctx.beginPath();
-        ctx.moveTo(m, hangingY + sag + 5);
-        ctx.lineTo(m + 4, hangingY + sag + 20);
-        ctx.lineTo(m - 4, hangingY + sag + 20);
-        ctx.closePath();
-        ctx.fill();
-      }
+    ctx.fillStyle = '#fffbeb';
+    for (let x = 24; x < 490; x += 28) {
+      ctx.beginPath(); ctx.arc(x, 12, 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, 148, 3.5, 0, Math.PI * 2); ctx.fill();
     }
 
-    // High-Contrast Clear Slide Warning Banner
-    ctx.fillStyle = 'rgba(220, 38, 38, 0.95)';
-    ctx.fillRect(-26, -92, 52, 16);
-    ctx.strokeStyle = '#ffd152';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(-26, -92, 52, 16);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 10px sans-serif';
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 44px "Segoe UI", "Noto Sans Devanagari", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('▼ SLIDE', 0, -84);
+    ctx.shadowColor = 'rgba(0,0,0,0.65)';
+    ctx.shadowBlur = 6;
+    ctx.fillText(mainText, 256, 68);
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 18px "Segoe UI", sans-serif';
+    ctx.letterSpacing = '3px';
+    ctx.fillText(subText, 256, 118);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    return tex;
   }
 
-  renderCrates(ctx) {
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 36, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
+  createSignboardMesh(tex, width = 4.0, height = 1.25) {
+    const group = new THREE.Group();
 
-    // Two stacked wooden puja supply crates
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(-30, -36, 32, 36);
-    ctx.fillRect(0, -26, 30, 26);
+    const boardMat = new THREE.MeshStandardMaterial({
+      map: tex,
+      roughness: 0.35,
+      metalness: 0.25,
+      emissive: 0x451a03,
+      emissiveIntensity: 0.35
+    });
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(width, height), boardMat);
+    group.add(board);
 
-    // Brass Corner Reinforcements
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-30, -36, 6, 6);
-    ctx.fillRect(-4, -36, 6, 6);
-    ctx.fillRect(0, -26, 6, 6);
-    ctx.fillRect(24, -26, 6, 6);
+    const frameGeo = new THREE.BoxGeometry(width + 0.25, height + 0.25, 0.14);
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.65 });
+    const frame = new THREE.Mesh(frameGeo, frameMat);
+    frame.position.z = -0.07;
+    group.add(frame);
 
-    // Saffron Silk Drapes on tops
-    ctx.fillStyle = '#ea580c';
-    ctx.beginPath();
-    ctx.arc(-14, -40, 8, 0, Math.PI * 2);
-    ctx.arc(-6, -38, 7, 0, Math.PI * 2);
-    ctx.arc(15, -30, 8, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Sacred Modak & Coconut offerings on crates
-    ctx.fillStyle = '#fff7eb';
-    ctx.beginPath();
-    ctx.arc(-14, -42, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(15, -32, 5, 0, Math.PI * 2);
-    ctx.fill();
+    return group;
   }
 
-  renderCart(ctx) {
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 42, 13, 0, 0, Math.PI * 2);
-    ctx.fill();
+  initContinuousStreet() {
+    const roadW = (typeof CONFIG !== 'undefined' && CONFIG.ROAD_WIDTH) ? CONFIG.ROAD_WIDTH : 11.5;
+    for (let i = 0; i < this.moduleCount; i++) {
+      const z = -i * this.moduleLength;
+      const leftCluster = this.createHaveliModule(i, true);
+      leftCluster.position.set(-roadW * 0.5 - 5.5, 0, z);
+      this.scene.add(leftCluster);
+      this.clusters.push({ group: leftCluster, z: z, side: 'left' });
 
-    // Traditional Wooden Wheels with Spokes & Brass Hubcaps
-    [-28, 28].forEach(wx => {
-      ctx.fillStyle = '#451a03';
-      ctx.beginPath();
-      ctx.arc(wx, -14, 14, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#ffd152';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(wx, -14, 14, 0, Math.PI * 2);
-      ctx.stroke();
+      const rightCluster = this.createHaveliModule(i, false);
+      rightCluster.position.set(roadW * 0.5 + 5.5, 0, z);
+      this.scene.add(rightCluster);
+      this.clusters.push({ group: rightCluster, z: z, side: 'right' });
+    }
+  }
 
-      // Wooden Spokes
-      ctx.strokeStyle = '#b45309';
-      ctx.lineWidth = 1.5;
-      for (let sp = 0; sp < 4; sp++) {
-        const ang = (sp * Math.PI) / 4;
-        ctx.beginPath();
-        ctx.moveTo(wx + Math.cos(ang) * 13, -14 + Math.sin(ang) * 13);
-        ctx.lineTo(wx - Math.cos(ang) * 13, -14 - Math.sin(ang) * 13);
-        ctx.stroke();
-      }
+  createHaveliModule(moduleIdx, isLeft) {
+    const group = new THREE.Group();
+    const styleIdx = (moduleIdx + (isLeft ? 0 : 3)) % 7;
 
-      // Brass Center Hub
-      ctx.fillStyle = '#ffd152';
-      ctx.beginPath();
-      ctx.arc(wx, -14, 4.5, 0, Math.PI * 2);
-      ctx.fill();
+    const heightMap = [21.0, 26.0, 19.5, 24.0, 20.0, 27.0, 22.5];
+    const bldgHeight = heightMap[styleIdx];
+    const bldgWidth = 10.5;
+    const bldgDepth = 15.6;
+
+    const wallColorMap = [
+      this.materials.wallSandstone,
+      this.materials.wallTerracotta,
+      this.materials.wallRose,
+      this.materials.wallOchre,
+      this.materials.wallTeak,
+      this.materials.wallCrimson,
+      this.materials.wallWhitewash
+    ];
+    const wallMat = wallColorMap[styleIdx];
+
+    // 1. Core Haveli Structure
+    const bldgGeo = new THREE.BoxGeometry(bldgWidth, bldgHeight, bldgDepth);
+    const bldg = new THREE.Mesh(bldgGeo, wallMat);
+    bldg.position.set(isLeft ? -5.0 : 5.0, bldgHeight * 0.5, 0);
+    bldg.castShadow = true;
+    bldg.receiveShadow = true;
+    group.add(bldg);
+
+    // Exact street-facing coordinate of the building facade
+    const streetFaceX = isLeft ? 0.25 : -0.25;
+
+    // 2. Sandstone Base Plinth
+    const plinthGeo = new THREE.BoxGeometry(0.8, 1.2, bldgDepth + 0.2);
+    const plinth = new THREE.Mesh(plinthGeo, this.materials.wallWhiteTrim);
+    plinth.position.set(streetFaceX + (isLeft ? 0.20 : -0.20), 0.6, 0);
+    group.add(plinth);
+
+    // 3. Vertical Pilasters / Columns breaking up flat facades into bays (Part 5)
+    [-5.0, 0, 5.0].forEach(pz => {
+      const colGeo = new THREE.BoxGeometry(0.40, bldgHeight, 0.40);
+      const col = new THREE.Mesh(colGeo, this.materials.wallWhiteTrim);
+      col.position.set(streetFaceX + (isLeft ? 0.15 : -0.15), bldgHeight * 0.5, pz);
+      col.castShadow = true;
+      group.add(col);
     });
 
-    // Carved Wooden Cart Body (Thela)
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(-38, -42, 76, 28);
-    ctx.strokeStyle = '#78350f';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-38, -42, 76, 28);
+    // 4. Multi-Story Stringcourse Ledges & Corbel Brackets
+    const floorCount = Math.floor(bldgHeight / 6.0);
+    for (let fl = 1; fl <= floorCount; fl++) {
+      const ledgeY = fl * 6.0;
+      const ledgeGeo = new THREE.BoxGeometry(1.2, 0.40, bldgDepth + 0.4);
+      const ledge = new THREE.Mesh(ledgeGeo, this.materials.wallWhiteTrim);
+      ledge.position.set(streetFaceX + (isLeft ? 0.45 : -0.45), ledgeY, 0);
+      ledge.castShadow = true;
+      group.add(ledge);
 
-    // Carved side slats & floral border
-    ctx.fillStyle = '#ffd152';
-    for (let s = -32; s <= 32; s += 12) {
-      ctx.fillRect(s, -38, 3, 20);
+      for (let bz = -bldgDepth * 0.44; bz <= bldgDepth * 0.44; bz += 2.6) {
+        const bracketGeo = new THREE.BoxGeometry(0.35, 0.45, 0.35);
+        const bracket = new THREE.Mesh(bracketGeo, this.materials.wallTeak);
+        bracket.position.set(streetFaceX + (isLeft ? 0.22 : -0.22), ledgeY - 0.35, bz);
+        group.add(bracket);
+      }
+
+      // Festive Marigold Garlands draped along ledges
+      for (let bz = -bldgDepth * 0.30; bz <= bldgDepth * 0.30; bz += 3.2) {
+        const garland = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.06, 6, 12, Math.PI), this.materials.marigoldOrange);
+        garland.rotation.y = isLeft ? Math.PI * 0.5 : -Math.PI * 0.5;
+        garland.rotation.z = Math.PI;
+        garland.position.set(streetFaceX + (isLeft ? 0.50 : -0.50), ledgeY - 0.20, bz);
+        group.add(garland);
+      }
     }
 
-    // Triangular Festive Saffron Canopy Roof
-    ctx.fillStyle = '#ea580c';
-    ctx.beginPath();
-    ctx.moveTo(-42, -42);
-    ctx.lineTo(0, -64);
-    ctx.lineTo(42, -42);
-    ctx.closePath();
-    ctx.fill();
+    // 5. Authentic Carved Jharokha Balcony
+    const jharokha = this.createOrnateJharokhaBalcony(isLeft);
+    jharokha.position.set(streetFaceX + (isLeft ? 0.45 : -0.45), 8.6, 0);
+    group.add(jharokha);
 
-    // Gold Canopy Finial & Trim
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(0, -66, 5, 0, Math.PI * 2);
-    ctx.fill();
+    // 6. Multiple Tiers of Recessed Windows with Wooden Frames, Shutters & Arch Lintels
+    [-4.6, -1.8, 1.8, 4.6].forEach(wz => {
+      [8.5, 14.5, 20.5].forEach(wy => {
+        if (wy < bldgHeight - 2.5 && Math.abs(wz) > 1.0) {
+          // Wooden Outer Frame
+          const frame = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.2, 1.6), this.materials.windowFrame);
+          frame.position.set(streetFaceX + (isLeft ? 0.10 : -0.10), wy, wz);
+          group.add(frame);
 
-    // Marigold Garland along the cart roof edge
-    for (let f = -38; f <= 38; f += 8) {
-      ctx.fillStyle = (f % 16 === 0) ? '#ffd152' : '#ff8426';
-      ctx.beginPath();
-      ctx.arc(f, -42, 3.5, 0, Math.PI * 2);
-      ctx.fill();
+          // Glowing Warm Amber Window Pane
+          const win = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.9), this.materials.windowGlow);
+          win.position.set(streetFaceX + (isLeft ? 0.16 : -0.16), wy, wz);
+          win.rotation.y = isLeft ? Math.PI * 0.5 : -Math.PI * 0.5;
+          group.add(win);
+
+          // Arch Lintel
+          const archLintel = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.25, 1.8), this.materials.wallWhiteTrim);
+          archLintel.position.set(streetFaceX + (isLeft ? 0.22 : -0.22), wy + 1.2, wz);
+          group.add(archLintel);
+
+          // Wooden Shutters (Open at authentic angle)
+          [-0.8, 0.8].forEach((sz, sIdx) => {
+            const shutter = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.8, 0.36), this.materials.wallTeak);
+            shutter.position.set(streetFaceX + (isLeft ? 0.18 : -0.18), wy, wz + sz);
+            shutter.rotation.y = (sIdx === 0 ? 0.35 : -0.35) * (isLeft ? 1 : -1);
+            group.add(shutter);
+          });
+        }
+      });
+    });
+
+    // 7. Rooftop Parapets & Chhatris
+    const parapet = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.2, bldgDepth), this.materials.wallWhiteTrim);
+    parapet.position.set(streetFaceX + (isLeft ? 0.20 : -0.20), bldgHeight + 0.6, 0);
+    group.add(parapet);
+
+    const chhatriDome = new THREE.Mesh(new THREE.ConeGeometry(1.6, 1.8, 10), this.materials.wallSandstone);
+    chhatriDome.position.set(streetFaceX + (isLeft ? -1.5 : 1.5), bldgHeight + 2.2, 0);
+    group.add(chhatriDome);
+
+    const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.6, 8), this.materials.wallTeak);
+    flagPole.position.set(streetFaceX, bldgHeight + 1.8, 0);
+    group.add(flagPole);
+
+    const flagGeo = new THREE.ConeGeometry(0.65, 1.5, 3);
+    flagGeo.rotateZ(Math.PI * 0.5);
+    const flag = new THREE.Mesh(flagGeo, this.materials.flagOrange);
+    flag.position.set(streetFaceX + (isLeft ? 0.8 : -0.8), bldgHeight + 2.4, 0);
+    group.add(flag);
+
+    // 8. Ground Floor Detailed Festival Shops with Actual 3D Products
+    let shopMesh, signTex, signW = 4.0, signH = 1.25;
+
+    switch (styleIdx) {
+      case 0:
+        shopMesh = this.createModakStall();
+        signTex = this.signTextures.modak;
+        break;
+      case 1:
+        shopMesh = this.createDholPerformanceStage();
+        signTex = this.signTextures.morya;
+        signW = 4.8;
+        break;
+      case 2:
+        shopMesh = this.createFlowerStall();
+        signTex = this.signTextures.flowers;
+        break;
+      case 3:
+        shopMesh = this.createPujaStall();
+        signTex = this.signTextures.puja;
+        break;
+      case 4:
+        shopMesh = this.createChaiStall();
+        signTex = this.signTextures.chai;
+        break;
+      case 5:
+        shopMesh = this.createMiniGaneshPandal();
+        signTex = this.signTextures.sweets;
+        break;
+      case 6:
+      default:
+        shopMesh = this.createModakStall();
+        signTex = this.signTextures.modak;
+        break;
+    }
+
+    if (shopMesh) {
+      shopMesh.position.set(streetFaceX + (isLeft ? 1.85 : -1.85), 0, 0);
+      group.add(shopMesh);
+    }
+
+    if (signTex) {
+      const signMesh = this.createSignboardMesh(signTex, signW, signH);
+      signMesh.position.set(streetFaceX + (isLeft ? 2.0 : -2.0), 4.8, 0);
+      signMesh.rotation.y = isLeft ? Math.PI * 0.5 : -Math.PI * 0.5;
+      group.add(signMesh);
+    }
+
+    // 9. Living Devotee Crowds on Sidewalks (Real stylized 3D human groups)
+    const crowd = this.createCrowdGroup(moduleIdx, isLeft);
+    crowd.position.set(streetFaceX + (isLeft ? 2.2 : -2.2), 0, 4.2);
+    group.add(crowd);
+
+    return group;
+  }
+
+  createOrnateJharokhaBalcony(isLeft) {
+    const balcony = new THREE.Group();
+
+    const corbelGeo = new THREE.CylinderGeometry(0.85, 0.20, 0.9, 8);
+    const corbel = new THREE.Mesh(corbelGeo, this.materials.wallSandstone);
+    corbel.position.set(0, -0.45, 0);
+    balcony.add(corbel);
+
+    const floorGeo = new THREE.BoxGeometry(1.2, 0.20, 2.6);
+    const floor = new THREE.Mesh(floorGeo, this.materials.wallWhiteTrim);
+    floor.position.y = 0.05;
+    balcony.add(floor);
+
+    const frontRailGeo = new THREE.BoxGeometry(0.12, 0.75, 2.5);
+    const frontRail = new THREE.Mesh(frontRailGeo, this.materials.wallWhiteTrim);
+    frontRail.position.set(isLeft ? 0.54 : -0.54, 0.45, 0);
+    balcony.add(frontRail);
+
+    [-1.2, 1.2].forEach(sz => {
+      const sideRailGeo = new THREE.BoxGeometry(1.1, 0.75, 0.12);
+      const sideRail = new THREE.Mesh(sideRailGeo, this.materials.wallWhiteTrim);
+      sideRail.position.set(0, 0.45, sz);
+      balcony.add(sideRail);
+    });
+
+    [-1.15, 1.15].forEach(pz => {
+      const pillarGeo = new THREE.CylinderGeometry(0.06, 0.07, 1.45, 8);
+      const pillar = new THREE.Mesh(pillarGeo, this.materials.wallTeak);
+      pillar.position.set(isLeft ? 0.5 : -0.5, 1.15, pz);
+      balcony.add(pillar);
+    });
+
+    const roofGeo = new THREE.ConeGeometry(1.4, 0.75, 8);
+    roofGeo.scale(0.8, 1.0, 1.6);
+    const roof = new THREE.Mesh(roofGeo, this.materials.wallTerracotta);
+    roof.position.set(0, 2.15, 0);
+    balcony.add(roof);
+
+    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), this.materials.goldFinial);
+    finial.position.set(0, 2.6, 0);
+    balcony.add(finial);
+
+    const lantern = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.22, 6), this.materials.bulbGlowWarm);
+    lantern.position.set(0, 1.35, 0);
+    balcony.add(lantern);
+
+    return balcony;
+  }
+
+  createModakStall() {
+    const stall = new THREE.Group();
+
+    const counter = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.05, 1.8), this.materials.wallTeak);
+    counter.position.y = 0.52;
+    counter.castShadow = true;
+    counter.receiveShadow = true;
+    stall.add(counter);
+
+    const canopy = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.28, 2.5), this.materials.canopyCrimson);
+    canopy.position.set(0, 3.3, 0);
+    canopy.rotation.z = -0.12;
+    stall.add(canopy);
+
+    [-1.2, 0, 1.2].forEach((tx, idx) => {
+      const thali = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.44, 0.08, 12), this.materials.brassMetal);
+      thali.position.set(tx, 1.10, 0);
+      stall.add(thali);
+
+      const modakCount = 5;
+      for (let m = 0; m < modakCount; m++) {
+        const modak = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.16, 8), this.materials.goldFinial);
+        const ang = (m / modakCount) * Math.PI * 2;
+        const mr = (m === 0) ? 0 : 0.22;
+        modak.position.set(tx + Math.cos(ang) * mr, 1.20, Math.sin(ang) * mr);
+        stall.add(modak);
+      }
+    });
+
+    [-1.6, 1.6].forEach(bx => {
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.22, 0.35), this.materials.canopyGold);
+      box.position.set(bx, 1.15, 0.55);
+      stall.add(box);
+    });
+
+    const shopkeeper = this.createStylizedPerson(this.materials.crowdKurtaWhite, this.materials.crowdDhoti, true);
+    shopkeeper.position.set(0, 0, -0.65);
+    stall.add(shopkeeper);
+
+    return stall;
+  }
+
+  createFlowerStall() {
+    const stall = new THREE.Group();
+
+    const counter = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.05, 1.8), this.materials.wallTeak);
+    counter.position.y = 0.52;
+    stall.add(counter);
+
+    const canopy = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.30, 2.5), this.materials.canopyGold);
+    canopy.position.set(0, 3.3, 0);
+    canopy.rotation.z = 0.12;
+    stall.add(canopy);
+
+    for (let col = -1.8; col <= 1.8; col += 0.40) {
+      const flowerMat = (Math.abs(col) % 0.8 < 0.3) ? this.materials.marigoldOrange : this.materials.marigoldYellow;
+      for (let gy = 1.3; gy <= 3.0; gy += 0.22) {
+        const flower = new THREE.Mesh(new THREE.SphereGeometry(0.065, 6, 6), flowerMat);
+        flower.position.set(col, gy, 1.1);
+        stall.add(flower);
+      }
+    }
+
+    [-1.3, 0, 1.3].forEach((bx, idx) => {
+      const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.40, 0.30, 0.28, 8), this.materials.wallTeak);
+      basket.position.set(bx, 1.20, 0);
+      stall.add(basket);
+
+      const moundMat = (idx === 0) ? this.materials.roseRed : (idx === 1 ? this.materials.marigoldYellow : this.materials.marigoldOrange);
+      const mound = new THREE.Mesh(new THREE.SphereGeometry(0.36, 8, 8), moundMat);
+      mound.position.set(bx, 1.40, 0);
+      stall.add(mound);
+    });
+
+    const seller = this.createStylizedPerson(this.materials.crowdKurtaSaffron, this.materials.crowdDhoti, true);
+    seller.position.set(0, 0, -0.65);
+    stall.add(seller);
+
+    return stall;
+  }
+
+  createChaiStall() {
+    const stall = new THREE.Group();
+
+    const counter = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.0, 1.6), this.materials.wallTeak);
+    counter.position.y = 0.5;
+    stall.add(counter);
+
+    const canopy = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.28, 2.4), this.materials.canopyCrimson);
+    canopy.position.set(0, 3.2, 0);
+    canopy.rotation.z = -0.12;
+    stall.add(canopy);
+
+    const kettle = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.65, 12), this.materials.brassMetal);
+    kettle.position.set(-0.9, 1.32, 0);
+    stall.add(kettle);
+
+    for (let c = 0; c < 5; c++) {
+      const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.05, 0.14, 6), this.materials.wallTerracotta);
+      cup.position.set(0.0 + c * 0.20, 1.08, 0.2);
+      stall.add(cup);
+    }
+
+    const chaiwala = this.createStylizedPerson(this.materials.crowdKurtaWhite, this.materials.crowdDhoti, true);
+    chaiwala.position.set(0, 0, -0.65);
+    stall.add(chaiwala);
+
+    return stall;
+  }
+
+  createPujaStall() {
+    const stall = new THREE.Group();
+
+    const counter = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.0, 1.8), this.materials.wallSandstone);
+    counter.position.y = 0.5;
+    stall.add(counter);
+
+    const canopy = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.30, 2.5), this.materials.canopyGold);
+    canopy.position.set(0, 3.3, 0);
+    canopy.rotation.z = -0.15;
+    stall.add(canopy);
+
+    [-0.9, 0.9].forEach(kx => {
+      const kalashPot = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), this.materials.brassMetal);
+      kalashPot.position.set(kx, 1.25, 0);
+      stall.add(kalashPot);
+
+      const coconut = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), this.materials.wallTeak);
+      coconut.position.set(kx, 1.46, 0);
+      stall.add(coconut);
+    });
+
+    const samai = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.20, 1.7, 8), this.materials.brassMetal);
+    samai.position.set(1.5, 0.85, 0.7);
+    stall.add(samai);
+
+    const samaiFlame = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.20, 6), this.materials.marigoldYellow);
+    samaiFlame.position.set(1.5, 1.76, 0.7);
+    stall.add(samaiFlame);
+
+    return stall;
+  }
+
+  createDholPerformanceStage() {
+    const stage = new THREE.Group();
+
+    const platform = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.55, 3.2), this.materials.wallTerracotta);
+    platform.position.y = 0.28;
+    stage.add(platform);
+
+    [-1.1, 1.1].forEach((dx, idx) => {
+      const drummer = new THREE.Group();
+      drummer.position.set(dx, 0.55, 0);
+
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.20, 0.85, 10), this.materials.crowdKurtaSaffron);
+      body.position.y = 0.55;
+      drummer.add(body);
+
+      const dhoti = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.60, 10), this.materials.crowdDhoti);
+      dhoti.position.y = 0.15;
+      drummer.add(dhoti);
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), this.materials.skin);
+      head.position.y = 1.15;
+      drummer.add(head);
+
+      const pagdi = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.16, 0.18, 10), this.materials.canopyCrimson);
+      pagdi.position.y = 1.28;
+      drummer.add(pagdi);
+
+      const dhol = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.80, 12), this.materials.wallTeak);
+      dhol.rotation.z = Math.PI * 0.5;
+      dhol.position.set(0, 0.65, 0.32);
+      drummer.add(dhol);
+
+      [-0.38, 0.38].forEach(rx => {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.02, 6, 12), this.materials.goldFinial);
+        ring.rotation.y = Math.PI * 0.5;
+        ring.position.set(rx, 0.65, 0.32);
+        drummer.add(ring);
+      });
+
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.40, 6), this.materials.wallWhiteTrim);
+      stick.position.set(0.30, 0.78, 0.36);
+      drummer.add(stick);
+
+      stage.add(drummer);
+      this.animatedDrummers.push({ mesh: drummer, baseRot: drummer.rotation.x, idx: idx });
+    });
+
+    return stage;
+  }
+
+  createMiniGaneshPandal() {
+    const pandal = new THREE.Group();
+
+    [-1.5, 1.5].forEach(px => {
+      const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 3.2, 10), this.materials.wallSandstone);
+      pillar.position.set(px, 1.6, 0);
+      pandal.add(pillar);
+
+      const kalash = new THREE.Mesh(new THREE.SphereGeometry(0.20, 8, 8), this.materials.goldFinial);
+      kalash.position.set(px, 3.35, 0);
+      pandal.add(kalash);
+    });
+
+    const arch = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.55, 1.6), this.materials.canopyCrimson);
+    arch.position.set(0, 3.2, 0);
+    pandal.add(arch);
+
+    const idolGroup = new THREE.Group();
+    idolGroup.position.set(0, 1.1, 0);
+
+    const idolBody = new THREE.Mesh(new THREE.SphereGeometry(0.60, 12, 12), this.materials.goldFinial);
+    idolGroup.add(idolBody);
+
+    const idolHead = new THREE.Mesh(new THREE.SphereGeometry(0.44, 12, 12), this.materials.goldFinial);
+    idolHead.position.y = 0.60;
+    idolGroup.add(idolHead);
+
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.05, 0.55, 8), this.materials.goldFinial);
+    trunk.position.set(0, 0.40, 0.30);
+    trunk.rotation.x = -0.5;
+    idolGroup.add(trunk);
+
+    const halo = new THREE.Mesh(new THREE.RingGeometry(0.75, 1.15, 16), this.materials.canopyGold);
+    halo.position.set(0, 0.60, -0.2);
+    idolGroup.add(halo);
+
+    pandal.add(idolGroup);
+    return pandal;
+  }
+
+  createStylizedPerson(clothingMat, lowerMat, isShopkeeper = false) {
+    const person = new THREE.Group();
+
+    const torsoGeo = new THREE.CylinderGeometry(0.22, 0.17, 0.70, 10);
+    const torso = new THREE.Mesh(torsoGeo, clothingMat);
+    torso.position.y = 0.95;
+    person.add(torso);
+
+    const lowerGeo = new THREE.CylinderGeometry(0.20, 0.15, 0.70, 10);
+    const lower = new THREE.Mesh(lowerGeo, lowerMat);
+    lower.position.y = 0.38;
+    person.add(lower);
+
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.12, 8), this.materials.skin);
+    neck.position.y = 1.35;
+    person.add(neck);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), this.materials.skin);
+    head.position.y = 1.48;
+    person.add(head);
+
+    if (isShopkeeper || Math.random() > 0.4) {
+      const pagdi = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.16, 0.15, 10), this.materials.canopyOrange);
+      pagdi.position.y = 1.58;
+      person.add(pagdi);
+    } else {
+      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 8), this.materials.hairDark);
+      hair.position.set(0, 1.52, -0.04);
+      person.add(hair);
+    }
+
+    [-0.26, 0.26].forEach((ax, idx) => {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.55, 6), clothingMat);
+      arm.position.set(ax, 0.88, 0.05);
+      arm.rotation.z = (idx === 0 ? 0.15 : -0.15);
+      person.add(arm);
+    });
+
+    return person;
+  }
+
+  createCrowdGroup(moduleIdx, isLeft) {
+    const group = new THREE.Group();
+
+    const cluster = [
+      {
+        z: -1.4,
+        type: 'male',
+        topMat: this.materials.crowdKurtaSaffron,
+        botMat: this.materials.crowdDhoti,
+        hasFlag: true,
+        rotY: isLeft ? 1.2 : -1.2
+      },
+      {
+        z: 0.0,
+        type: 'female',
+        topMat: this.materials.crowdSareeMagenta,
+        botMat: this.materials.crowdSareeMagenta,
+        hasFlag: false,
+        rotY: isLeft ? 0.4 : -0.4
+      },
+      {
+        z: 1.3,
+        type: 'male',
+        topMat: this.materials.crowdKurtaMaroon,
+        botMat: this.materials.crowdDhoti,
+        hasFlag: false,
+        rotY: isLeft ? 2.0 : -2.0
+      }
+    ];
+
+    cluster.forEach(pData => {
+      const person = this.createStylizedPerson(pData.topMat, pData.botMat, false);
+      person.position.set(0, 0, pData.z);
+      person.rotation.y = pData.rotY;
+
+      if (pData.hasFlag) {
+        const flagStaff = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.2, 6), this.materials.wallTeak);
+        flagStaff.position.set(0.28, 1.1, 0.15);
+        person.add(flagStaff);
+
+        const fMesh = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.75, 3), this.materials.flagOrange);
+        fMesh.rotation.z = Math.PI * 0.5;
+        fMesh.position.set(0.65, 1.8, 0.15);
+        person.add(fMesh);
+      }
+
+      group.add(person);
+    });
+
+    return group;
+  }
+
+  initOverheadCanopies() {
+    const spanSpacing = 28.0;
+    for (let z = -15; z >= -240; z -= spanSpacing) {
+      const wireGroup = this.createOverheadWireSpan(z);
+      this.overheadWires.push({ group: wireGroup, z: z });
+      this.scene.add(wireGroup);
+    }
+  }
+
+  createOverheadWireSpan(z) {
+    const group = new THREE.Group();
+    group.position.set(0, 11.2, z);
+
+    const cableGeo = new THREE.CylinderGeometry(0.025, 0.025, 28.0, 8);
+    cableGeo.rotateZ(Math.PI * 0.5);
+    const cable = new THREE.Mesh(cableGeo, this.materials.wallTeak);
+    group.add(cable);
+
+    for (let x = -12.0; x <= 12.0; x += 2.0) {
+      const sag = -Math.sin(((x + 12) / 24) * Math.PI) * 0.95;
+      const bulbGeo = new THREE.SphereGeometry(0.08, 6, 6);
+      const bulb = new THREE.Mesh(bulbGeo, this.materials.bulbGlowWarm);
+      bulb.position.set(x, sag, 0);
+      group.add(bulb);
+    }
+
+    [-11.5, 11.5].forEach(kx => {
+      const kandil = this.createKandilLantern();
+      kandil.position.set(kx, -1.2, 0);
+      group.add(kandil);
+    });
+
+    return group;
+  }
+
+  createKandilLantern() {
+    const kGroup = new THREE.Group();
+
+    const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.55), this.materials.kandilGlow);
+    kGroup.add(star);
+
+    const streamerGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.85, 4);
+    [-0.18, 0, 0.18].forEach(sx => {
+      const s = new THREE.Mesh(streamerGeo, this.materials.goldFinial);
+      s.position.set(sx, -0.65, 0);
+      kGroup.add(s);
+    });
+
+    return kGroup;
+  }
+
+  initDriftingPetals() {
+    const pCount = 90;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(pCount * 3);
+
+    for (let i = 0; i < pCount; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 22;
+      pos[i * 3 + 1] = Math.random() * 8.5 + 0.5;
+      pos[i * 3 + 2] = -Math.random() * 110;
+    }
+
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0xff8c00,
+      size: 0.28,
+      transparent: true,
+      opacity: 0.85
+    });
+
+    this.petalSystem = new THREE.Points(geo, mat);
+    this.scene.add(this.petalSystem);
+  }
+
+  initDistantCityscape() {
+    const cityGroup = new THREE.Group();
+    cityGroup.position.set(0, 0, -220);
+
+    [-70, -50, -32, 32, 50, 70].forEach(cx => {
+      const h = Math.random() * 22 + 18;
+      const bGeo = new THREE.BoxGeometry(14, h, 14);
+      const bMesh = new THREE.Mesh(bGeo, this.materials.distantCityMat);
+      bMesh.position.set(cx, h * 0.5, (Math.random() - 0.5) * 30);
+      cityGroup.add(bMesh);
+    });
+
+    this.scene.add(cityGroup);
+  }
+
+  // GRAND GANESH PANDAL (Visual Destination Landmark - Bright & Glorious!)
+  createGrandGaneshPandal() {
+    const pandal = new THREE.Group();
+    pandal.position.set(0, 0, -145.0);
+
+    const archGeo = new THREE.BoxGeometry(28.0, 4.5, 5.0);
+    const arch = new THREE.Mesh(archGeo, this.materials.canopyCrimson);
+    arch.position.y = 15.0;
+    pandal.add(arch);
+
+    [-11.5, -4.5, 4.5, 11.5].forEach(px => {
+      const pillarGeo = new THREE.CylinderGeometry(0.85, 1.05, 15.0, 16);
+      const pillar = new THREE.Mesh(pillarGeo, this.materials.wallSandstone);
+      pillar.position.set(px, 7.5, 0);
+      pandal.add(pillar);
+
+      const kalash = new THREE.Mesh(new THREE.SphereGeometry(1.05, 12, 12), this.materials.goldFinial);
+      kalash.position.set(px, 15.8, 0);
+      pandal.add(kalash);
+    });
+
+    for (let tier = 0; tier < 4; tier++) {
+      const sWidth = 19.0 - tier * 3.8;
+      const sHeight = 2.5;
+      const sGeo = new THREE.BoxGeometry(sWidth, sHeight, 4.0);
+      const sMesh = new THREE.Mesh(sGeo, this.materials.wallSandstone);
+      sMesh.position.y = 17.5 + tier * 2.4;
+      pandal.add(sMesh);
+    }
+
+    const spireFinial = new THREE.Mesh(new THREE.ConeGeometry(2.4, 5.5, 16), this.materials.goldFinial);
+    spireFinial.position.y = 28.5;
+    pandal.add(spireFinial);
+
+    const idolGroup = new THREE.Group();
+    idolGroup.position.set(0, 4.5, 0);
+
+    const throneGeo = new THREE.CylinderGeometry(5.8, 6.4, 1.8, 24);
+    const throne = new THREE.Mesh(throneGeo, this.materials.canopyGold);
+    throne.position.y = 0.9;
+    idolGroup.add(throne);
+
+    const bodyGeo = new THREE.SphereGeometry(3.5, 20, 20);
+    bodyGeo.scale(1.2, 1.1, 1.1);
+    const body = new THREE.Mesh(bodyGeo, this.materials.goldFinial);
+    body.position.y = 4.2;
+    idolGroup.add(body);
+
+    const pitambaraGeo = new THREE.CylinderGeometry(3.6, 4.4, 2.2, 20);
+    const pitambara = new THREE.Mesh(pitambaraGeo, this.materials.canopyOrange);
+    pitambara.position.y = 2.4;
+    idolGroup.add(pitambara);
+
+    const headGeo = new THREE.SphereGeometry(2.2, 18, 18);
+    const head = new THREE.Mesh(headGeo, this.materials.goldFinial);
+    head.position.y = 7.6;
+    idolGroup.add(head);
+
+    const trunkGeo = new THREE.CylinderGeometry(0.55, 0.28, 3.2, 12);
+    const trunk = new THREE.Mesh(trunkGeo, this.materials.goldFinial);
+    trunk.position.set(0.3, 5.6, 1.8);
+    trunk.rotation.x = -0.65;
+    trunk.rotation.z = 0.25;
+    idolGroup.add(trunk);
+
+    [-2.4, 2.4].forEach(ex => {
+      const earGeo = new THREE.CylinderGeometry(1.5, 1.5, 0.20, 12);
+      earGeo.rotateZ(Math.PI * 0.5);
+      const ear = new THREE.Mesh(earGeo, this.materials.goldFinial);
+      ear.position.set(ex, 7.6, 0.2);
+      idolGroup.add(ear);
+    });
+
+    const haloGeo = new THREE.RingGeometry(3.8, 6.2, 32);
+    const haloMat = new THREE.MeshBasicMaterial({
+      color: 0xffd152,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.95
+    });
+    const halo = new THREE.Mesh(haloGeo, haloMat);
+    halo.position.set(0, 8.0, -1.2);
+    idolGroup.add(halo);
+
+    const crownGeo = new THREE.ConeGeometry(1.8, 4.0, 16);
+    const crown = new THREE.Mesh(crownGeo, this.materials.goldFinial);
+    crown.position.y = 10.6;
+    idolGroup.add(crown);
+
+    pandal.add(idolGroup);
+
+    const pandalLight = new THREE.PointLight(0xffb703, 4.5, 80.0);
+    pandalLight.position.set(0, 14.0, 4.0);
+    pandal.add(pandalLight);
+
+    this.scene.add(pandal);
+    this.horizonPandal = pandal;
+    return pandal;
+  }
+
+  createHorizonGaneshaSanctum() {
+    return this.createGrandGaneshPandal();
+  }
+
+  update(moveDist, dt = 0.016) {
+    const totalSpan = this.moduleLength * this.moduleCount;
+
+    this.clusters.forEach(c => {
+      c.group.position.z += moveDist;
+      const despawnZ = (typeof CONFIG !== 'undefined' && CONFIG.DESPAWN_Z) ? CONFIG.DESPAWN_Z : 22.0;
+      if (c.group.position.z > despawnZ) {
+        c.group.position.z -= totalSpan;
+      }
+    });
+
+    for (let i = 0; i < this.overheadWires.length; i++) {
+      const wire = this.overheadWires[i];
+      wire.group.position.z += moveDist;
+      if (wire.group.position.z > -8.0) {
+        wire.group.position.z -= (this.overheadWires.length * 28.0);
+      }
+    }
+
+    if (this.petalSystem) {
+      const pos = this.petalSystem.geometry.attributes.position.array;
+      for (let i = 0; i < pos.length; i += 3) {
+        pos[i + 2] += moveDist * 0.45;
+        pos[i + 1] -= 0.018;
+        if (pos[i + 1] < 0.2) pos[i + 1] = 7.5;
+        if (pos[i + 2] > 10.0) pos[i + 2] = -95.0;
+      }
+      this.petalSystem.geometry.attributes.position.needsUpdate = true;
+    }
+
+    const time = Date.now() * 0.008;
+    this.animatedDrummers.forEach(d => {
+      d.mesh.rotation.x = d.baseRot + Math.sin(time * 3.0 + d.idx) * 0.18;
+    });
+
+    if (Math.random() < 0.022 && this.fireworkPool) {
+      this.spawnFirework();
+    }
+    this.updateFireworks(dt);
+  }
+
+  initFireworksPool() {
+    this.fireworkPool = [];
+    const pCount = 36;
+    for (let i = 0; i < 5; i++) {
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(pCount * 3);
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({
+        color: 0xffd152,
+        size: 1.8,
+        transparent: true,
+        opacity: 0
+      });
+      const mesh = new THREE.Points(geo, mat);
+      mesh.visible = false;
+      this.scene.add(mesh);
+      this.fireworkPool.push({
+        mesh: mesh,
+        pos: pos,
+        vel: Array.from({ length: pCount }, () => new THREE.Vector3()),
+        life: 0,
+        active: false
+      });
+    }
+  }
+
+  spawnFirework() {
+    if (!this.fireworkPool) return;
+    const fw = this.fireworkPool.find(f => !f.active);
+    if (!fw) return;
+
+    const colors = [0xffd152, 0xd946ef, 0x38bdf8, 0xf97316, 0xec4899];
+    fw.mesh.material.color.setHex(colors[Math.floor(Math.random() * colors.length)]);
+
+    const origin = {
+      x: (Math.random() - 0.5) * 80,
+      y: 30 + Math.random() * 20,
+      z: -140 - Math.random() * 40
+    };
+
+    const pCount = 36;
+    for (let i = 0; i < pCount; i++) {
+      fw.pos[i * 3] = origin.x;
+      fw.pos[i * 3 + 1] = origin.y;
+      fw.pos[i * 3 + 2] = origin.z;
+
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI;
+      const spd = 5.0 + Math.random() * 8.0;
+      fw.vel[i].set(
+        spd * Math.sin(phi) * Math.cos(theta),
+        spd * Math.cos(phi),
+        spd * Math.sin(phi) * Math.sin(theta)
+      );
+    }
+
+    fw.mesh.geometry.attributes.position.needsUpdate = true;
+    fw.mesh.material.opacity = 1.0;
+    fw.mesh.visible = true;
+    fw.life = 1.0;
+    fw.active = true;
+  }
+
+  updateFireworks(dt) {
+    if (!this.fireworkPool) return;
+    for (let i = 0; i < this.fireworkPool.length; i++) {
+      const fw = this.fireworkPool[i];
+      if (!fw.active) continue;
+
+      fw.life -= dt * 0.9;
+      fw.mesh.material.opacity = Math.max(0, fw.life);
+
+      for (let j = 0; j < fw.vel.length; j++) {
+        fw.pos[j * 3] += fw.vel[j].x * dt;
+        fw.pos[j * 3 + 1] += fw.vel[j].y * dt;
+        fw.pos[j * 3 + 2] += fw.vel[j].z * dt;
+        fw.vel[j].y -= 4.0 * dt;
+      }
+      fw.mesh.geometry.attributes.position.needsUpdate = true;
+
+      if (fw.life <= 0) {
+        fw.active = false;
+        fw.mesh.visible = false;
+      }
+    }
+  }
+
+  reset() {
+    for (let i = 0; i < this.clusters.length; i++) {
+      const moduleIdx = Math.floor(i / 2);
+      this.clusters[i].group.position.z = -moduleIdx * this.moduleLength;
+    }
+    const spanSpacing = 28.0;
+    for (let i = 0; i < this.overheadWires.length; i++) {
+      this.overheadWires[i].group.position.z = -15 - i * spanSpacing;
+    }
+    if (this.fireworkPool) {
+      this.fireworkPool.forEach(fw => {
+        fw.active = false;
+        fw.mesh.visible = false;
+      });
     }
   }
 }
 
-// ----------------------------------------------------------------------------
-// 7. COLLECTIBLE MANAGER (Glowing Modaks, Coins & Trails)
-// ----------------------------------------------------------------------------
-class CollectibleManager {
+
+
+// ============================================================================
+// 8. TRUE 3D COLLECTIBLES (Object Pooled Modaks, Coins & Power-Up Tokens)
+// ============================================================================
+class Collectible3DManager {
   constructor(game) {
     this.game = game;
+    this.scene = game.three.scene;
     this.items = [];
-    this.spawnTimer = 0;
+    this.spawnCounter = 0;
+
+    // Shared Reusable Materials (Zero allocation during gameplay)
+    this.modakMat = new THREE.MeshStandardMaterial({
+      color: 0xf59e0b,
+      metalness: 0.65,
+      roughness: 0.22,
+      emissive: 0xffba08,
+      emissiveIntensity: 0.42
+    });
+
+    this.kesarMat = new THREE.MeshBasicMaterial({ color: 0xd62828 });
+
+    this.auraMat = new THREE.MeshBasicMaterial({
+      color: 0xffd152,
+      transparent: true,
+      opacity: 0.35,
+      side: THREE.DoubleSide
+    });
+
+    this.coinMat = new THREE.MeshStandardMaterial({
+      color: 0xffd152,
+      metalness: 0.85,
+      roughness: 0.18,
+      emissive: 0xffb703,
+      emissiveIntensity: 0.28
+    });
+
+    this.tokenMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.78,
+      roughness: 0.20
+    });
+
+    // Shared Reusable Geometries (Zero allocation during gameplay)
+    this.modakBaseGeo = new THREE.SphereGeometry(0.38, 14, 10);
+    this.modakBaseGeo.scale(1.0, 0.8, 1.0);
+
+    this.modakConeGeo = new THREE.ConeGeometry(0.36, 0.65, 12);
+    this.kesarGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.16, 6);
+
+    this.auraGeo = new THREE.RingGeometry(0.42, 0.72, 14);
+    this.auraGeo.rotateX(-Math.PI * 0.5);
+
+    this.coinGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.12, 16);
+    this.coinGeo.rotateX(Math.PI * 0.5);
+
+    this.tokenGeo = new THREE.SphereGeometry(0.55, 16, 14);
+
+    // Distinct materials for power-up types
+    this.tokenMaterials = {
+      'SHIELD': new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.65, roughness: 0.2 }),
+      'MAGNET': new THREE.MeshStandardMaterial({ color: 0xc084fc, emissive: 0x7e22ce, emissiveIntensity: 0.65, roughness: 0.2 }),
+      'BOOST': new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xd97706, emissiveIntensity: 0.75, roughness: 0.2 }),
+      'DOUBLE': new THREE.MeshStandardMaterial({ color: 0xf97316, emissive: 0xc2410c, emissiveIntensity: 0.70, roughness: 0.2 }),
+      'SLOW': new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x0891b2, emissiveIntensity: 0.65, roughness: 0.2 }),
+      'HEART': new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xb91c1c, emissiveIntensity: 0.75, roughness: 0.2 })
+    };
+
+    // Object Pools (Pre-allocated once)
+    this.pool = {
+      'MODAK': [],
+      'COIN': [],
+      'TOKEN': []
+    };
+
+    this.initPools();
+  }
+
+  initPools() {
+    // 1. Pre-allocate 36 Modak Meshes
+    for (let i = 0; i < 36; i++) {
+      const mesh = this.buildModakMesh();
+      mesh.visible = false;
+      mesh.userData.inUse = false;
+      mesh.position.set(0, -200, 0);
+      this.scene.add(mesh);
+      this.pool.MODAK.push(mesh);
+    }
+
+    // 2. Pre-allocate 36 Coin Meshes
+    for (let i = 0; i < 36; i++) {
+      const mesh = this.buildCoinMesh();
+      mesh.visible = false;
+      mesh.userData.inUse = false;
+      mesh.position.set(0, -200, 0);
+      this.scene.add(mesh);
+      this.pool.COIN.push(mesh);
+    }
+
+    // 3. Pre-allocate 14 Token Meshes
+    for (let i = 0; i < 14; i++) {
+      const mesh = this.buildTokenMesh('SHIELD');
+      mesh.visible = false;
+      mesh.userData.inUse = false;
+      mesh.position.set(0, -200, 0);
+      this.scene.add(mesh);
+      this.pool.TOKEN.push(mesh);
+    }
+  }
+
+  getPooledMesh(type) {
+    const key = (type === 'MODAK' || type === 'COIN') ? type : 'TOKEN';
+    let list = this.pool[key];
+    if (!list) {
+      list = [];
+      this.pool[key] = list;
+    }
+    let mesh = list.find(m => !m.userData.inUse);
+    if (!mesh) {
+      // Expand pool gracefully if needed
+      if (key === 'MODAK') mesh = this.buildModakMesh();
+      else if (key === 'COIN') mesh = this.buildCoinMesh();
+      else mesh = this.buildTokenMesh(type);
+      mesh.visible = false;
+      mesh.position.set(0, -200, 0);
+      this.scene.add(mesh);
+      list.push(mesh);
+    }
+
+    if (key === 'TOKEN') {
+      this.configureTokenMesh(mesh, type);
+    }
+
+    mesh.userData.inUse = true;
+    mesh.visible = true;
+    return mesh;
+  }
+
+  releaseItem(it) {
+    if (it && it.mesh) {
+      it.mesh.visible = false;
+      it.mesh.userData.inUse = false;
+      it.mesh.position.set(0, -200, 0);
+    }
   }
 
   reset() {
+    for (let i = 0; i < this.items.length; i++) {
+      this.releaseItem(this.items[i]);
+    }
     this.items = [];
-    this.spawnTimer = 0;
+    for (const key in this.pool) {
+      this.pool[key].forEach(m => {
+        m.visible = false;
+        m.userData.inUse = false;
+        m.position.set(0, -200, 0);
+      });
+    }
+    this.spawnCounter = 0;
   }
 
-  update(dt) {
-    const moveDist = this.game.speed * dt;
-    this.spawnTimer += moveDist;
+  seedInitialCollectibles() {
+    // Immediate starting rows so coins and modaks are visible from second 1
+    // 1. Center lane coins leading forward
+    for (let k = 0; k < 4; k++) {
+      this.createItem('COIN', CONFIG.LANES[1], 0.85, -18.0 - k * 4.5);
+    }
+    // 2. Modak jump arc
+    for (let k = 0; k < 5; k++) {
+      const arcY = 0.85 + Math.sin((k / 4) * Math.PI) * 1.8;
+      this.createItem('MODAK', CONFIG.LANES[1], arcY, -44.0 - k * 4.0);
+    }
+    // 3. Lane switching coins
+    this.createItem('COIN', CONFIG.LANES[0], 0.85, -74.0);
+    this.createItem('COIN', CONFIG.LANES[0], 0.85, -78.5);
+    this.createItem('COIN', CONFIG.LANES[1], 0.85, -84.0);
+    this.createItem('COIN', CONFIG.LANES[2], 0.85, -90.0);
+    this.createItem('COIN', CONFIG.LANES[2], 0.85, -94.5);
+  }
 
-    if (this.spawnTimer >= 140) {
-      this.spawnTimer = 0;
+  update(dt, moveDist) {
+    this.spawnCounter += moveDist;
+    if (this.spawnCounter >= 22.0) {
+      this.spawnCounter = 0;
       this.spawnPattern();
     }
 
     const isMagnet = this.game.powerUps.isMagnetActive;
-    const playerX = this.game.player.currentLaneX;
+    const playerX = this.game.player.currentX;
+    const playerY = this.game.player.jumpY;
 
     for (let i = this.items.length - 1; i >= 0; i--) {
-      const item = this.items[i];
-      item.z -= moveDist;
+      const it = this.items[i];
+      const prevZ = it.mesh.position.z;
+      it.mesh.position.z += moveDist;
+      const currZ = it.mesh.position.z;
 
-      if (isMagnet && item.type === 'MODAK' && item.z < 320 && item.z > -20) {
-        const targetLaneX = playerX;
-        item.laneX += (targetLaneX - item.laneX) * Math.min(1.0, 10 * dt);
+      it.mesh.rotation.y += 3.2 * dt;
+      it.mesh.position.y = it.baseY + Math.sin(Date.now() * 0.006 + currZ * 0.1) * 0.20;
+
+      // Magnet attraction for BOTH Modak and Coin
+      if (isMagnet && (it.type === 'MODAK' || it.type === 'COIN') && currZ > -45 && currZ < 6) {
+        it.mesh.position.x += (playerX - it.mesh.position.x) * Math.min(1.0, 16.0 * dt);
+        it.mesh.position.y += ((playerY + 0.85) - it.mesh.position.y) * Math.min(1.0, 16.0 * dt);
       }
 
-      if (!item.collected && Math.abs(item.z) < 28) {
-        const laneDiff = Math.abs(this.game.player.currentLaneX - item.laneX);
-        const playerJump = this.game.player.jumpY;
-
-        const isHeightMatch = (item.worldY === 0 && playerJump < 30) ||
-                              (item.worldY > 20 && playerJump >= 18);
-
-        if (laneDiff < 0.65 && isHeightMatch) {
-          item.collected = true;
-          this.game.collectItem(item);
+      // Swept Player Pickup Collision (Zero tunneling across all speeds)
+      const crossedPlayerPlane = (prevZ <= 1.8 && currZ >= -1.8);
+      if (!it.collected && crossedPlayerPlane) {
+        const dx = Math.abs(playerX - it.mesh.position.x);
+        const dy = Math.abs((playerY + 0.85) - it.mesh.position.y);
+        if (dx < 1.5 && dy < 1.6) {
+          it.collected = true;
+          this.game.collectItem(it);
+          this.releaseItem(it);
+          this.items.splice(i, 1);
+          continue;
         }
       }
 
-      if (item.z < -40 || item.collected) {
+      // Clean Despawn behind player: return to pool
+      if (currZ > 4.5) {
+        this.releaseItem(it);
         this.items.splice(i, 1);
       }
     }
   }
 
-  spawnPattern() {
-    const patterns = ['STRAIGHT', 'ZIGZAG', 'ARC', 'COIN_TRAIL'];
+  spawnPattern(spawnZ = CONFIG.SPAWN_Z) {
+    const patterns = [
+      'COIN_LINE',
+      'COIN_STAGGER',
+      'MODAK_ARC',
+      'MODAK_STRAIGHT',
+      'COIN_MODAK_MIX',
+      'LANE_REWARD_TRIO'
+    ];
     const p = patterns[Math.floor(Math.random() * patterns.length)];
-    const baseLane = Math.floor(Math.random() * 3) - 1;
+    const baseLane = Math.floor(Math.random() * 3);
 
-    if (p === 'STRAIGHT') {
+    if (p === 'COIN_LINE') {
+      for (let k = 0; k < 5; k++) {
+        this.createItem('COIN', CONFIG.LANES[baseLane], 0.85, spawnZ - k * 4.8);
+      }
+    } else if (p === 'COIN_STAGGER') {
+      const l1 = baseLane;
+      const l2 = (baseLane + 1) % 3;
+      const l3 = (baseLane + 2) % 3;
+      this.createItem('COIN', CONFIG.LANES[l1], 0.85, spawnZ);
+      this.createItem('COIN', CONFIG.LANES[l1], 0.85, spawnZ - 4.5);
+      this.createItem('COIN', CONFIG.LANES[l2], 0.85, spawnZ - 9.0);
+      this.createItem('COIN', CONFIG.LANES[l2], 0.85, spawnZ - 13.5);
+      this.createItem('COIN', CONFIG.LANES[l3], 0.85, spawnZ - 18.0);
+    } else if (p === 'MODAK_ARC') {
+      for (let k = 0; k < 5; k++) {
+        const arcY = 0.85 + Math.sin((k / 4) * Math.PI) * 2.0;
+        this.createItem('MODAK', CONFIG.LANES[baseLane], arcY, spawnZ - k * 4.5);
+      }
+    } else if (p === 'MODAK_STRAIGHT') {
       for (let k = 0; k < 4; k++) {
-        this.items.push({
-          type: 'MODAK',
-          laneX: baseLane,
-          worldY: 0,
-          z: CONFIG.ROAD_LENGTH + k * 45,
-          collected: false
-        });
+        this.createItem('MODAK', CONFIG.LANES[baseLane], 0.85, spawnZ - k * 5.0);
       }
-    } else if (p === 'ZIGZAG') {
+    } else if (p === 'COIN_MODAK_MIX') {
       for (let k = 0; k < 3; k++) {
-        const lane = Math.max(-1, Math.min(1, baseLane + (k % 2 === 0 ? -1 : 1)));
-        this.items.push({
-          type: 'MODAK',
-          laneX: lane,
-          worldY: 0,
-          z: CONFIG.ROAD_LENGTH + k * 50,
-          collected: false
-        });
+        this.createItem('COIN', CONFIG.LANES[baseLane], 0.85, spawnZ - k * 4.5);
       }
-    } else if (p === 'ARC') {
-      for (let k = 0; k < 4; k++) {
-        const jumpElevation = Math.sin((k / 3) * Math.PI) * 48;
-        this.items.push({
-          type: 'MODAK',
-          laneX: baseLane,
-          worldY: jumpElevation,
-          z: CONFIG.ROAD_LENGTH + k * 38,
-          collected: false
-        });
-      }
-    } else if (p === 'COIN_TRAIL') {
-      for (let k = 0; k < 3; k++) {
-        this.items.push({
-          type: 'COIN',
-          laneX: baseLane,
-          worldY: 0,
-          z: CONFIG.ROAD_LENGTH + k * 40,
-          collected: false
-        });
-      }
+      this.createItem('MODAK', CONFIG.LANES[baseLane], 0.85, spawnZ - 14.5);
+    } else if (p === 'LANE_REWARD_TRIO') {
+      this.createItem('COIN', CONFIG.LANES[0], 0.85, spawnZ);
+      this.createItem('MODAK', CONFIG.LANES[1], 0.85, spawnZ - 5.0);
+      this.createItem('COIN', CONFIG.LANES[2], 0.85, spawnZ - 10.0);
     }
   }
 
-  render(ctx) {
-    const sorted = [...this.items].sort((a, b) => b.z - a.z);
+  createItem(type, x, y, z) {
+    const mesh = this.getPooledMesh(type);
+    mesh.position.set(x, y, z);
+    mesh.visible = true;
 
-    sorted.forEach(item => {
-      const proj = this.game.perspective.project(item.laneX, item.worldY, item.z);
-      const scale = proj.scale;
-      const x = proj.x;
-      const y = proj.y;
-
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(scale, scale);
-
-      const bobbing = Math.sin(Date.now() * 0.006 + item.z * 0.05) * 6;
-      ctx.translate(0, bobbing - 20);
-
-      if (item.type === 'MODAK') {
-        this.renderModak(ctx);
-      } else {
-        this.renderCoin(ctx);
-      }
-      ctx.restore();
+    this.items.push({
+      type: type,
+      mesh: mesh,
+      baseY: y,
+      collected: false
     });
   }
 
-  renderModak(ctx) {
-    const pulse = Math.sin(Date.now() * 0.008) * 4;
-    const spinTilt = Math.sin(Date.now() * 0.005) * 0.15;
-    ctx.rotate(spinTilt);
-
-    // Divine Radiating Golden Aura
-    const aura = ctx.createRadialGradient(0, -4, 4, 0, -4, 28 + pulse);
-    aura.addColorStop(0, 'rgba(255, 235, 150, 0.7)');
-    aura.addColorStop(0.5, 'rgba(255, 180, 20, 0.35)');
-    aura.addColorStop(1, 'rgba(255, 150, 0, 0)');
-    ctx.fillStyle = aura;
-    ctx.beginPath();
-    ctx.arc(0, -4, 28 + pulse, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 3D Pleated Golden Modak Body
-    const modakGrad = ctx.createLinearGradient(-15, -28, 15, 16);
-    modakGrad.addColorStop(0, '#fffbeb');
-    modakGrad.addColorStop(0.3, '#fef3c7');
-    modakGrad.addColorStop(0.7, '#fde68a');
-    modakGrad.addColorStop(1, '#f59e0b');
-    ctx.fillStyle = modakGrad;
-
-    ctx.beginPath();
-    ctx.moveTo(0, -28);
-    ctx.bezierCurveTo(18, -14, 22, 12, 0, 18);
-    ctx.bezierCurveTo(-22, 12, -18, -14, 0, -28);
-    ctx.fill();
-
-    // Golden Pleat Ribs (Traditional Modak Folds)
-    ctx.strokeStyle = '#d97706';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.moveTo(0, -26); ctx.lineTo(0, 16);
-    ctx.moveTo(-3, -24); ctx.quadraticCurveTo(-11, 0, -7, 14);
-    ctx.moveTo(3, -24); ctx.quadraticCurveTo(11, 0, 7, 14);
-    ctx.moveTo(-5, -20); ctx.quadraticCurveTo(-17, 3, -13, 11);
-    ctx.moveTo(5, -20); ctx.quadraticCurveTo(17, 3, 13, 11);
-    ctx.stroke();
-
-    // Top Sacred Kesar (Saffron Strand & Gold Tip)
-    ctx.fillStyle = '#dc2626';
-    ctx.fillRect(-1, -30, 2, 4);
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(0, -28, 3.5, 0, Math.PI * 2);
-    ctx.fill();
+  createModakMesh() {
+    return this.buildModakMesh();
   }
 
-  renderCoin(ctx) {
-    const spin = Math.cos(Date.now() * 0.007);
-    ctx.scale(spin, 1);
+  buildModakMesh() {
+    const group = new THREE.Group();
 
-    // Warm Golden Radial Glow
-    ctx.shadowColor = '#ffd152';
-    ctx.shadowBlur = 12;
+    const baseSphere = new THREE.Mesh(this.modakBaseGeo, this.modakMat);
+    baseSphere.position.y = 0.28;
+    group.add(baseSphere);
 
-    // Metallic Outer Rim
-    const coinGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 18);
-    coinGrad.addColorStop(0, '#fef08a');
-    coinGrad.addColorStop(0.6, '#ffd152');
-    coinGrad.addColorStop(1, '#b45309');
-    ctx.fillStyle = coinGrad;
-    ctx.beginPath();
-    ctx.arc(0, 0, 17, 0, Math.PI * 2);
-    ctx.fill();
+    const cone = new THREE.Mesh(this.modakConeGeo, this.modakMat);
+    cone.position.y = 0.58;
+    group.add(cone);
 
-    // Inner Coin Face with Specular Rim
-    ctx.strokeStyle = '#fef9c3';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(0, 0, 13.5, 0, Math.PI * 2);
-    ctx.stroke();
+    const kesar = new THREE.Mesh(this.kesarGeo, this.kesarMat);
+    kesar.position.y = 0.94;
+    group.add(kesar);
 
-    // Engraved Sacred Om Symbol
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#78350f';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('ॐ', 0, 1);
+    const aura = new THREE.Mesh(this.auraGeo, this.auraMat);
+    aura.position.y = 0.10;
+    group.add(aura);
+
+    return group;
+  }
+
+  buildCoinMesh() {
+    const group = new THREE.Group();
+    const coin = new THREE.Mesh(this.coinGeo, this.coinMat);
+    group.add(coin);
+
+    // Inner embossed golden ring for rich festival appearance
+    const ringGeo = new THREE.RingGeometry(0.24, 0.38, 16);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xfffbeb, side: THREE.DoubleSide });
+    const ringFront = new THREE.Mesh(ringGeo, ringMat);
+    ringFront.position.z = 0.065;
+    group.add(ringFront);
+
+    const ringBack = new THREE.Mesh(ringGeo, ringMat);
+    ringBack.position.z = -0.065;
+    group.add(ringBack);
+
+    return group;
+  }
+
+  buildTokenMesh(type = 'SHIELD') {
+    const group = new THREE.Group();
+
+    // Central Floating Glowing Orb
+    const orb = new THREE.Mesh(this.tokenGeo, this.tokenMaterials[type] || this.tokenMat);
+    group.add(orb);
+
+    // Outer Orbiting Power Ring
+    const ringGeo = new THREE.TorusGeometry(0.85, 0.08, 8, 20);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI * 0.35;
+    group.add(ring);
+
+    group.userData.orb = orb;
+    group.userData.ring = ring;
+
+    return group;
+  }
+
+  configureTokenMesh(mesh, type) {
+    if (mesh.userData && mesh.userData.orb) {
+      const mat = this.tokenMaterials[type] || this.tokenMat;
+      mesh.userData.orb.material = mat;
+      if (mesh.userData.ring && mesh.userData.ring.material) {
+        mesh.userData.ring.material.color.set(mat.color);
+      }
+    }
   }
 }
 
 // ----------------------------------------------------------------------------
-// 8. POWER-UP MANAGER (6 Distinct Power-Ups & Timers)
+// 9. POWER-UP & COMBO MANAGER
 // ----------------------------------------------------------------------------
 class PowerUpManager {
   constructor(game) {
     this.game = game;
-    this.tokens = [];
-    this.spawnTimer = 0;
-
     this.hasShield = false;
     this.isMagnetActive = false;
     this.magnetTimer = 0;
@@ -1672,11 +3645,12 @@ class PowerUpManager {
     this.doubleScoreTimer = 0;
     this.isSlowTime = false;
     this.slowTimeTimer = 0;
+
+    this.tokens = [];
+    this.spawnTimer = 0;
   }
 
   reset() {
-    this.tokens = [];
-    this.spawnTimer = 0;
     this.hasShield = false;
     this.isMagnetActive = false;
     this.magnetTimer = 0;
@@ -1686,34 +3660,16 @@ class PowerUpManager {
     this.doubleScoreTimer = 0;
     this.isSlowTime = false;
     this.slowTimeTimer = 0;
+    this.tokens = [];
+    this.spawnTimer = 0;
     this.updateHUD();
   }
 
-  update(dt) {
-    const moveDist = this.game.speed * dt;
+  update(dt, moveDist) {
     this.spawnTimer += moveDist;
-
-    if (this.spawnTimer >= 320) {
+    if (this.spawnTimer >= 85.0) {
       this.spawnTimer = 0;
       this.spawnToken();
-    }
-
-    for (let i = this.tokens.length - 1; i >= 0; i--) {
-      const tok = this.tokens[i];
-      tok.z -= moveDist;
-
-      if (Math.abs(tok.z) < 26) {
-        const laneDiff = Math.abs(this.game.player.currentLaneX - (tok.lane - 1));
-        if (laneDiff < 0.65) {
-          this.activate(tok.type);
-          this.tokens.splice(i, 1);
-          continue;
-        }
-      }
-
-      if (tok.z < -40) {
-        this.tokens.splice(i, 1);
-      }
     }
 
     let hudNeedsUpdate = false;
@@ -1757,14 +3713,9 @@ class PowerUpManager {
 
   spawnToken() {
     const types = ['SHIELD', 'MAGNET', 'BOOST', 'DOUBLE', 'SLOW', 'HEART'];
-    const selected = types[Math.floor(Math.random() * types.length)];
+    const type = types[Math.floor(Math.random() * types.length)];
     const lane = Math.floor(Math.random() * 3);
-
-    this.tokens.push({
-      type: selected,
-      lane: lane,
-      z: CONFIG.ROAD_LENGTH
-    });
+    this.game.collectibles.createItem(type, CONFIG.LANES[lane], 1.2, CONFIG.SPAWN_Z);
   }
 
   activate(type) {
@@ -1825,1885 +3776,47 @@ class PowerUpManager {
     }
     container.innerHTML = html;
   }
-
-  render(ctx) {
-    this.tokens.forEach(tok => {
-      const laneX = tok.lane - 1;
-      const proj = this.game.perspective.project(laneX, 10, tok.z);
-      const scale = proj.scale;
-      const x = proj.x;
-      const y = proj.y;
-
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.scale(scale, scale);
-
-      const bob = Math.sin(Date.now() * 0.007 + tok.z) * 6;
-      ctx.translate(0, bob - 24);
-
-      ctx.shadowColor = '#ffd152';
-      ctx.shadowBlur = 16;
-
-      ctx.fillStyle = 'rgba(255, 209, 82, 0.2)';
-      ctx.beginPath();
-      ctx.arc(0, 0, 22, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#ffd152';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      let icon = '🛡️';
-      if (tok.type === 'MAGNET') icon = '🧲';
-      if (tok.type === 'BOOST') icon = '⚡';
-      if (tok.type === 'DOUBLE') icon = '⭐';
-      if (tok.type === 'SLOW') icon = '⏱️';
-      if (tok.type === 'HEART') icon = '❤️';
-
-      ctx.font = '18px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(icon, 0, 2);
-
-      ctx.restore();
-    });
-  }
 }
 
 // ----------------------------------------------------------------------------
-// 9. DENSE CINEMATIC FESTIVAL ENVIRONMENT (Streets, Pandals, Crowds, Ganesha)
-// ----------------------------------------------------------------------------
-class EnvironmentManager {
-  constructor(game) {
-    this.game = game;
-    this.phase = 1; // 1: Sunset, 2: Evening, 3: Night, 4: Ganesha Destination
-    this.fireworks = [];
-    this.scenery = [];
-    this.overheadFestoons = [];
-
-    // Dense roadside festival scenery generation
-    this.initScenery();
-  }
-
-  initScenery() {
-    this.scenery = [];
-    this.overheadFestoons = [];
-
-    // Overhead festive festoons spanning across street every 85 units
-    for (let z = 50; z < CONFIG.ROAD_LENGTH + 120; z += 85) {
-      this.overheadFestoons.push({ z: z });
-    }
-
-    // Dense multi-tier roadside scenery:
-    // Left & Right sides packed with stalls, pandals, dhol drummers, crowd, banners, lamps
-    const types = [
-      'STALL_MODAK', 'STALL_FLOWERS', 'DHOL_GROUP', 'CROWD_CHEER',
-      'GRAND_PANDAL', 'PANDAL_GATE', 'FESTIVAL_BANNER', 'PEDESTAL_DIYA',
-      'KANDIL_LIGHTS', 'FESTIVE_UMBRELLA'
-    ];
-
-    let curZ = 30;
-    while (curZ < CONFIG.ROAD_LENGTH + 140) {
-      // Curbside Foreground item (closer to road)
-      const curbType = this.getSceneryTypeForDistance(0, 'FOREGROUND');
-      this.scenery.push({
-        side: 'LEFT',
-        tier: 'FOREGROUND',
-        x: -1.75 - Math.random() * 0.2,
-        z: curZ,
-        type: curbType,
-        flip: false
-      });
-      this.scenery.push({
-        side: 'RIGHT',
-        tier: 'FOREGROUND',
-        x: 1.75 + Math.random() * 0.2,
-        z: curZ + 20,
-        type: curbType,
-        flip: true
-      });
-
-      // Midground Streetfront Shop / Pandal (larger, set slightly back)
-      const midType = this.getSceneryTypeForDistance(0, 'MIDGROUND');
-      this.scenery.push({
-        side: 'LEFT',
-        tier: 'MIDGROUND',
-        x: -2.75 - Math.random() * 0.35,
-        z: curZ + 15,
-        type: midType,
-        flip: false
-      });
-      this.scenery.push({
-        side: 'RIGHT',
-        tier: 'MIDGROUND',
-        x: 2.75 + Math.random() * 0.35,
-        z: curZ + 35,
-        type: midType,
-        flip: true
-      });
-
-      curZ += 48; // Dense 48-unit spacing for a packed festival street!
-    }
-  }
-
-  // Visual Progression scenery type selector
-  getSceneryTypeForDistance(dist, tier) {
-    const pct = Math.min(1.0, dist / CONFIG.DESTINATION_DISTANCE);
-    if (tier === 'FOREGROUND') {
-      if (pct < 0.20) { // 0-20%: Festival Entrance
-        const pool = ['PEDESTAL_DIYA', 'FESTIVAL_BANNER', 'CROWD_CHEER', 'PEDESTAL_DIYA'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      } else if (pct < 0.40) { // 20-40%: Festival Street
-        const pool = ['CROWD_CHEER', 'FESTIVAL_BANNER', 'PEDESTAL_DIYA', 'FESTIVE_UMBRELLA'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      } else if (pct < 0.60) { // 40-60%: Dhol Chowk
-        const pool = ['DHOL_GROUP', 'DHOL_GROUP', 'CROWD_CHEER', 'FESTIVAL_BANNER'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      } else if (pct < 0.80) { // 60-80%: Flower Bazaar
-        const pool = ['PEDESTAL_DIYA', 'CROWD_CHEER', 'FESTIVE_UMBRELLA', 'PEDESTAL_DIYA'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      } else if (pct < 0.95) { // 80-95%: Grand Festival Night
-        const pool = ['PEDESTAL_DIYA', 'CROWD_CHEER', 'DHOL_GROUP', 'PEDESTAL_DIYA'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      } else { // 95-100%: Ganesha Destination
-        const pool = ['PEDESTAL_DIYA', 'PEDESTAL_DIYA', 'CROWD_CHEER', 'FESTIVAL_BANNER'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      }
-    } else { // MIDGROUND
-      if (pct < 0.20) { // 0-20%: Festival Entrance
-        const pool = ['PANDAL_GATE', 'STALL_MODAK', 'GRAND_PANDAL', 'FESTIVAL_BANNER'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      } else if (pct < 0.40) { // 20-40%: Festival Street
-        const pool = ['STALL_MODAK', 'STALL_MODAK', 'FESTIVE_UMBRELLA', 'KANDIL_LIGHTS', 'GRAND_PANDAL'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      } else if (pct < 0.60) { // 40-60%: Dhol Chowk
-        const pool = ['GRAND_PANDAL', 'DHOL_GROUP', 'DHOL_GROUP', 'PANDAL_GATE', 'KANDIL_LIGHTS'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      } else if (pct < 0.80) { // 60-80%: Flower Bazaar / Grand Pandal Street
-        const pool = ['STALL_FLOWERS', 'STALL_FLOWERS', 'GRAND_PANDAL', 'PANDAL_GATE', 'KANDIL_LIGHTS'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      } else if (pct < 0.95) { // 80-95%: Grand Festival Night
-        const pool = ['GRAND_PANDAL', 'GRAND_PANDAL', 'KANDIL_LIGHTS', 'PANDAL_GATE', 'STALL_FLOWERS'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      } else { // 95-100%: Ganesha Destination
-        const pool = ['GRAND_PANDAL', 'GRAND_PANDAL', 'PANDAL_GATE', 'KANDIL_LIGHTS'];
-        return pool[Math.floor(Math.random() * pool.length)];
-      }
-    }
-  }
-
-  reset() {
-    this.phase = 1;
-    this.fireworks = [];
-    this.initScenery();
-  }
-
-  update(dt) {
-    const dist = this.game.distance;
-
-    // Progression Phases: Sunset (0-500m) -> Evening (500-1100m) -> Night (1100-1900m) -> Destination (1900m+)
-    if (dist < 500) {
-      this.phase = 1;
-    } else if (dist < 1100) {
-      this.phase = 2;
-    } else if (dist < 1900) {
-      this.phase = 3;
-    } else {
-      this.phase = 4;
-    }
-
-    // Scroll Roadside Scenery with Dynamic Zone Spawning
-    const moveDist = this.game.speed * dt;
-    const maxZ = CONFIG.ROAD_LENGTH + 120;
-
-    this.scenery.forEach(item => {
-      item.z -= moveDist;
-      if (item.z < 0) {
-        item.z += maxZ;
-        item.type = this.getSceneryTypeForDistance(this.game.distance, item.tier);
-      }
-    });
-
-    this.overheadFestoons.forEach(f => {
-      f.z -= moveDist;
-      if (f.z < 0) {
-        f.z += maxZ;
-      }
-    });
-
-    // Special Zone Particles (Dhol Chowk & Flower Bazaar)
-    const pct = Math.min(1.0, dist / CONFIG.DESTINATION_DISTANCE);
-    if (pct >= 0.40 && pct < 0.60 && Math.random() < 0.25) {
-      this.game.particles.spawn(Math.random() * this.game.width, Math.random() * (this.game.height * 0.6), 1, {
-        colors: ['#ff8426', '#ffd152', '#ff4d6d'],
-        shape: 'petal',
-        minSpeed: 1.2,
-        maxSpeed: 2.8,
-        baseVx: 1.5,
-        baseVy: 1.0
-      });
-    } else if (pct >= 0.60 && pct < 0.80 && Math.random() < 0.30) {
-      this.game.particles.spawn(Math.random() * this.game.width, Math.random() * (this.game.height * 0.6), 1, {
-        colors: ['#f43f5e', '#ff8426', '#ffd152', '#fb7185'],
-        shape: 'petal',
-        minSpeed: 1.0,
-        maxSpeed: 2.5,
-        baseVx: 1.4,
-        baseVy: 1.1
-      });
-    }
-
-    // Fireworks in Phase 3 & 4
-    if ((this.phase >= 3 || this.game.state === 'DESTINATION_CELEBRATION') && Math.random() < 0.035) {
-      this.spawnFirework();
-    }
-
-    for (let f = this.fireworks.length - 1; f >= 0; f--) {
-      const fw = this.fireworks[f];
-      fw.life -= dt;
-      if (fw.life <= 0) {
-        this.fireworks.splice(f, 1);
-      }
-    }
-  }
-
-  spawnFirework() {
-    const x = Math.random() * this.game.width;
-    const y = Math.random() * (this.game.height * 0.28);
-    const colors = ['#ffd152', '#ff6b1a', '#ff4d6d', '#38bdf8', '#4ade80', '#c084fc'];
-    const chosenColor = colors[Math.floor(Math.random() * colors.length)];
-
-    this.fireworks.push({
-      x: x,
-      y: y,
-      color: chosenColor,
-      life: 1.2,
-      maxLife: 1.2,
-      radius: 26 + Math.random() * 36
-    });
-
-    this.game.particles.spawn(x, y, 22, {
-      color: chosenColor,
-      minSpeed: 2,
-      maxSpeed: 7,
-      shape: 'spark'
-    });
-  }
-
-  // CINEMATIC FESTIVAL SKY
-  renderSky(ctx, width, height) {
-    const horizon = this.game.perspective.horizonY;
-    const grad = ctx.createLinearGradient(0, 0, 0, horizon);
-
-    if (this.phase === 1) {
-      // Sunset: Royal Purple -> Crimson -> Fiery Saffron -> Golden Horizon
-      grad.addColorStop(0, '#230b38');
-      grad.addColorStop(0.35, '#7f1d3d');
-      grad.addColorStop(0.70, '#c2410c');
-      grad.addColorStop(0.92, '#ea580c');
-      grad.addColorStop(1, '#ffba08');
-    } else if (this.phase === 2) {
-      // Twilight: Amethyst Violet -> Deep Magenta -> Saffron Twilight
-      grad.addColorStop(0, '#0f1026');
-      grad.addColorStop(0.40, '#2e104d');
-      grad.addColorStop(0.75, '#6b1d52');
-      grad.addColorStop(1, '#b45309');
-    } else {
-      // Grand Festival Night: Midnight Indigo -> Deep Sapphire with Celestial Glow
-      grad.addColorStop(0, '#03050d');
-      grad.addColorStop(0.45, '#070f2b');
-      grad.addColorStop(0.85, '#101d4a');
-      grad.addColorStop(1, '#1e295d');
-    }
-
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, width, horizon + 2);
-
-    // Sun / Moon with Atmospheric Halo
-    if (this.phase === 1) {
-      // Radiant Setting Sun casting volumetric glow
-      const sunX = width * 0.72;
-      const sunY = horizon * 0.65;
-      const sunGlow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 140);
-      sunGlow.addColorStop(0, 'rgba(255, 240, 180, 0.95)');
-      sunGlow.addColorStop(0.35, 'rgba(255, 130, 30, 0.55)');
-      sunGlow.addColorStop(1, 'rgba(255, 100, 20, 0)');
-      ctx.fillStyle = sunGlow;
-      ctx.beginPath();
-      ctx.arc(sunX, sunY, 140, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#fffbeb';
-      ctx.beginPath();
-      ctx.arc(sunX, sunY, 32, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      // Glowing Full Moon with Luminous Aura
-      const moonX = width * 0.8;
-      const moonY = horizon * 0.42;
-      const moonGlow = ctx.createRadialGradient(moonX, moonY, 15, moonX, moonY, 90);
-      moonGlow.addColorStop(0, 'rgba(255, 245, 210, 0.8)');
-      moonGlow.addColorStop(0.4, 'rgba(255, 209, 82, 0.25)');
-      moonGlow.addColorStop(1, 'rgba(255, 209, 82, 0)');
-      ctx.fillStyle = moonGlow;
-      ctx.beginPath();
-      ctx.arc(moonX, moonY, 90, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#fffdf0';
-      ctx.beginPath();
-      ctx.arc(moonX, moonY, 26, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Ambient Twinkling Stars
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-      for (let s = 0; s < 45; s++) {
-        const sx = (s * 137.5) % width;
-        const sy = (s * 73.1) % (horizon * 0.85);
-        const sz = (s % 3 === 0) ? 2.0 : 1.2;
-        ctx.fillRect(sx, sy, sz, sz);
-      }
-    }
-
-    // Fireworks
-    this.fireworks.forEach(fw => {
-      const progress = 1 - (fw.life / fw.maxLife);
-      ctx.save();
-      ctx.strokeStyle = fw.color;
-      ctx.globalAlpha = 1 - progress;
-      ctx.lineWidth = 2.5;
-      ctx.shadowColor = fw.color;
-      ctx.shadowBlur = 12;
-      ctx.beginPath();
-      ctx.arc(fw.x, fw.y, fw.radius * progress, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    });
-
-    // Parallax Silhouettes of Temples and City Skyline
-    this.renderParallaxSilhouettes(ctx, width, horizon);
-
-    // EARLY VISIBLE GANESHA DESTINATION ON HORIZON
-    this.renderHorizonGaneshaDestination(ctx, width, horizon);
-  }
-
-  // LAYER 3: CONTINUOUS INDIAN FESTIVAL ARCHITECTURE & SKYLINE
-  renderParallaxSilhouettes(ctx, width, horizon) {
-    const dist = this.game.distance;
-    const isSunset = this.phase === 1;
-    const isTwilight = this.phase === 2;
-
-    // 1. Far Skyline Silhouette (Stepped Temple Shikharas, Kalashes, Pandal Domes)
-    const farOffset = (dist * 0.08) % 360;
-    ctx.fillStyle = isSunset ? '#3b0d26' : (isTwilight ? '#160829' : '#040612');
-    ctx.beginPath();
-    ctx.moveTo(0, horizon);
-
-    for (let x = -farOffset; x < width + 360; x += 90) {
-      ctx.lineTo(x, horizon);
-      ctx.lineTo(x + 15, horizon - 20);
-      ctx.lineTo(x + 28, horizon - 52); // Stepped Shikhara
-      ctx.lineTo(x + 45, horizon - 88); // Towering spire
-      ctx.lineTo(x + 62, horizon - 52);
-      ctx.lineTo(x + 75, horizon - 20);
-      ctx.lineTo(x + 90, horizon);
-    }
-    ctx.lineTo(width, horizon);
-    ctx.closePath();
-    ctx.fill();
-
-    // Golden Kalashes on far temple pinnacles
-    ctx.fillStyle = isSunset ? '#f59e0b' : '#ffd152';
-    for (let x = -farOffset; x < width + 360; x += 90) {
-      ctx.beginPath();
-      ctx.arc(x + 45, horizon - 90, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // 2. Mid-Background: Continuous 2-to-3 Story Heritage Street Facades
-    const midOffset = (dist * 0.22) % 480;
-    const wallColor = isSunset ? '#5a1a36' : (isTwilight ? '#240d3d' : '#0a0d1e');
-    const windowColor = isSunset ? 'rgba(255, 215, 120, 0.85)' : 'rgba(255, 200, 80, 0.9)';
-    const windowGlow = isSunset ? 'rgba(255, 130, 40, 0.4)' : 'rgba(255, 180, 50, 0.5)';
-
-    ctx.fillStyle = wallColor;
-    ctx.beginPath();
-    ctx.moveTo(0, horizon);
-
-    for (let x = -midOffset; x < width + 480; x += 120) {
-      const h = 42 + ((x * 13) % 28);
-      ctx.lineTo(x, horizon);
-      ctx.lineTo(x, horizon - h);
-      ctx.lineTo(x + 120, horizon - h);
-      ctx.lineTo(x + 120, horizon);
-    }
-    ctx.lineTo(width, horizon);
-    ctx.closePath();
-    ctx.fill();
-
-    // Jharokha Balconies & Arched Lit Windows
-    for (let x = -midOffset; x < width + 480; x += 120) {
-      const h = 42 + ((x * 13) % 28);
-
-      // Rooftop Balustrade & Fairy Lights
-      ctx.strokeStyle = '#ffd152';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(x, horizon - h);
-      ctx.lineTo(x + 120, horizon - h);
-      ctx.stroke();
-
-      for (let dot = x + 10; dot < x + 115; dot += 18) {
-        ctx.fillStyle = '#ffd152';
-        ctx.fillRect(dot, horizon - h - 3, 2.5, 2.5);
-      }
-
-      // Arched Glowing Windows with Jali effect
-      const winY = horizon - h + 12;
-      for (let w = x + 18; w < x + 110; w += 28) {
-        // Window Glow
-        ctx.fillStyle = windowGlow;
-        ctx.beginPath();
-        ctx.arc(w + 6, winY + 6, 10, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Arched Window Frame
-        ctx.fillStyle = windowColor;
-        ctx.beginPath();
-        ctx.arc(w + 6, winY, 6, Math.PI, Math.PI * 2);
-        ctx.lineTo(w + 12, winY + 14);
-        ctx.lineTo(w, winY + 14);
-        ctx.closePath();
-        ctx.fill();
-
-        // Jali Lattice Crossbars
-        ctx.strokeStyle = wallColor;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(w + 6, winY - 6);
-        ctx.lineTo(w + 6, winY + 14);
-        ctx.moveTo(w, winY + 6);
-        ctx.lineTo(w + 12, winY + 6);
-        ctx.stroke();
-      }
-
-      // Saffron Festival Flag on Rooftop
-      const flagWave = Math.sin((dist * 0.08) + (x * 0.05)) * 6;
-      ctx.strokeStyle = '#78350f';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x + 60, horizon - h);
-      ctx.lineTo(x + 60, horizon - h - 18);
-      ctx.stroke();
-
-      ctx.fillStyle = '#ff6b1a';
-      ctx.beginPath();
-      ctx.moveTo(x + 60, horizon - h - 18);
-      ctx.lineTo(x + 76 + flagWave, horizon - h - 12);
-      ctx.lineTo(x + 60, horizon - h - 6);
-      ctx.closePath();
-      ctx.fill();
-    }
-  }
-
-  // MAGNIFICENT GANESHA DESTINATION ON THE HORIZON
-  renderHorizonGaneshaDestination(ctx, width, horizon) {
-    const dist = this.game.distance;
-    const progress = Math.min(1.0, dist / CONFIG.DESTINATION_DISTANCE);
-    const centerX = width * 0.5;
-
-    // Scales from distant sacred beacon to colossal glowing temple sanctum
-    const scale = 0.25 + Math.pow(progress, 1.4) * 1.35;
-    const ganeshaY = horizon - 28 * scale;
-
-    ctx.save();
-    ctx.translate(centerX, ganeshaY);
-    ctx.scale(scale, scale);
-
-    // Divine Golden Halo (Prabhavali) with Rotating Rays
-    const pulse = Math.sin(Date.now() * 0.005) * 8;
-    const haloRadius = 60 + pulse;
-
-    const haloGlow = ctx.createRadialGradient(0, -60, 20, 0, -60, haloRadius * 1.8);
-    haloGlow.addColorStop(0, 'rgba(255, 230, 120, 0.95)');
-    haloGlow.addColorStop(0.4, 'rgba(255, 140, 20, 0.5)');
-    haloGlow.addColorStop(1, 'rgba(255, 100, 10, 0)');
-    ctx.fillStyle = haloGlow;
-    ctx.beginPath();
-    ctx.arc(0, -60, haloRadius * 1.8, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Sacred Prabhavali Sunburst Rays
-    ctx.strokeStyle = 'rgba(255, 209, 82, 0.75)';
-    ctx.lineWidth = 2.5;
-    const rayRot = Date.now() * 0.001;
-    for (let r = 0; r < 16; r++) {
-      const angle = (r * Math.PI) / 8 + rayRot;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(angle) * (haloRadius * 0.7), -60 + Math.sin(angle) * (haloRadius * 0.7));
-      ctx.lineTo(Math.cos(angle) * (haloRadius * 1.3), -60 + Math.sin(angle) * (haloRadius * 1.3));
-      ctx.stroke();
-    }
-
-    // Grand Multi-Tier Temple Pandal Architecture
-    ctx.fillStyle = '#7f1d1d'; // Crimson temple base
-    ctx.beginPath();
-    ctx.moveTo(-110, 25);
-    ctx.lineTo(-90, -110);
-    ctx.lineTo(0, -165); // Towering Shikhara pinnacle
-    ctx.lineTo(90, -110);
-    ctx.lineTo(110, 25);
-    ctx.closePath();
-    ctx.fill();
-
-    // Golden Kalash Finials & Temple Spire
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(0, -168, 9, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillRect(-3, -185, 6, 18);
-
-    // Carved Golden Pandal Columns
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-95, -100, 12, 125);
-    ctx.fillRect(83, -100, 12, 125);
-
-    // Ornate Royal Canopy Fabric
-    ctx.fillStyle = '#d97706';
-    ctx.beginPath();
-    ctx.moveTo(-95, -95);
-    ctx.quadraticCurveTo(0, -125, 95, -95);
-    ctx.lineTo(90, -85);
-    ctx.quadraticCurveTo(0, -115, -90, -85);
-    ctx.closePath();
-    ctx.fill();
-
-    // ========================================
-    // MAJESTIC LORD GANESHA IDOL
-    // ========================================
-    // 1. Royal Golden Mukut (Jeweled Crown)
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.moveTo(-22, -88);
-    ctx.lineTo(0, -125);
-    ctx.lineTo(22, -88);
-    ctx.closePath();
-    ctx.fill();
-
-    // Ruby on Crown
-    ctx.fillStyle = '#dc2626';
-    ctx.beginPath();
-    ctx.arc(0, -102, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 2. Head & Large Fan-Like Ears
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(0, -70, 25, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Left & Right Ears with Kundal Ornaments
-    ctx.beginPath();
-    ctx.arc(-34, -70, 18, 0, Math.PI * 2);
-    ctx.arc(34, -70, 18, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#f59e0b';
-    ctx.beginPath();
-    ctx.arc(-42, -62, 5, 0, Math.PI * 2);
-    ctx.arc(42, -62, 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 3. Sacred Chandan Tilak & Trinetra on Forehead
-    ctx.fillStyle = '#dc2626';
-    ctx.fillRect(-2, -82, 4, 10);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(-6, -78, 12, 2.5);
-
-    // 4. Curved Elephant Trunk holding Golden Modak
-    ctx.strokeStyle = '#ffd152';
-    ctx.lineWidth = 10;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(0, -62);
-    ctx.quadraticCurveTo(12, -38, -10, -28);
-    ctx.stroke();
-
-    // Giant Glowing Modak on Trunk
-    ctx.fillStyle = '#fff7eb';
-    ctx.shadowColor = '#ffd152';
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.arc(-12, -28, 6.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // 5. Divine Seated Body in Saffron Pitambar
-    ctx.fillStyle = '#ea580c';
-    ctx.beginPath();
-    ctx.ellipse(0, -15, 42, 30, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Marigold Varmala Garland draped on chest
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.arc(0, -32, 24, 0.2, Math.PI - 0.2);
-    ctx.stroke();
-
-    // 6. Blessing Hand (Abhaya Mudra) radiating light
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(-36, -24, 10, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-  }
-
-  // PERSPECTIVE ROAD, SIDEWALKS, CURBS & RICH SCENERY
-  renderRoad(ctx) {
-    const persp = this.game.perspective;
-    const width = persp.width;
-    const horizon = persp.horizonY;
-    const groundBase = persp.groundBaseY;
-
-    // 1. Sidewalk Stone Pavements extending beyond the road
-    const pFarLeftWalk = persp.project(-3.6, 0, CONFIG.ROAD_LENGTH);
-    const pFarRightWalk = persp.project(3.6, 0, CONFIG.ROAD_LENGTH);
-    const pNearLeftWalk = persp.project(-3.6, 0, 0);
-    const pNearRightWalk = persp.project(3.6, 0, 0);
-
-    ctx.save();
-
-    // Stone Sidewalk Pavement Base
-    const walkGrad = ctx.createLinearGradient(0, horizon, 0, groundBase);
-    walkGrad.addColorStop(0, '#151726');
-    walkGrad.addColorStop(1, '#252136');
-    ctx.fillStyle = walkGrad;
-
-    // Left Sidewalk
-    ctx.beginPath();
-    ctx.moveTo(pFarLeftWalk.x, pFarLeftWalk.y);
-    const pFarRoadL = persp.project(-1.5, 0, CONFIG.ROAD_LENGTH);
-    ctx.lineTo(pFarRoadL.x, pFarRoadL.y);
-    const pNearRoadL = persp.project(-1.5, 0, 0);
-    ctx.lineTo(pNearRoadL.x, pNearRoadL.y);
-    ctx.lineTo(pNearLeftWalk.x, pNearLeftWalk.y);
-    ctx.closePath();
-    ctx.fill();
-
-    // Right Sidewalk
-    ctx.beginPath();
-    const pFarRoadR = persp.project(1.5, 0, CONFIG.ROAD_LENGTH);
-    ctx.moveTo(pFarRoadR.x, pFarRoadR.y);
-    ctx.lineTo(pFarRightWalk.x, pFarRightWalk.y);
-    ctx.lineTo(pNearRightWalk.x, pNearRightWalk.y);
-    const pNearRoadR = persp.project(1.5, 0, 0);
-    ctx.lineTo(pNearRoadR.x, pNearRoadR.y);
-    ctx.closePath();
-    ctx.fill();
-
-    // 2. Asphalt Road Surface with Warm Golden Ambient Reflections
-    const roadGrad = ctx.createLinearGradient(0, horizon, 0, groundBase);
-    roadGrad.addColorStop(0, '#181b2e');
-    roadGrad.addColorStop(0.5, '#23253b');
-    roadGrad.addColorStop(1, '#2c2e47');
-    ctx.fillStyle = roadGrad;
-
-    ctx.beginPath();
-    ctx.moveTo(pFarRoadL.x, pFarRoadL.y);
-    ctx.lineTo(pFarRoadR.x, pFarRoadR.y);
-    ctx.lineTo(pNearRoadR.x, pNearRoadR.y);
-    ctx.lineTo(pNearRoadL.x, pNearRoadL.y);
-    ctx.closePath();
-    ctx.fill();
-
-    // 3. Glowing Illuminated Curbs with Alternating Saffron & Gold Segments
-    const segments = 24;
-    const speedOffset = (this.game.distance * 1.8) % 100;
-
-    for (let s = 0; s < segments; s++) {
-      const z1 = Math.pow(s / segments, 1.8) * CONFIG.ROAD_LENGTH;
-      const z2 = Math.pow((s + 1) / segments, 1.8) * CONFIG.ROAD_LENGTH;
-
-      const pL1 = persp.project(-1.5, 0, z1);
-      const pL2 = persp.project(-1.5, 0, z2);
-      const pR1 = persp.project(1.5, 0, z1);
-      const pR2 = persp.project(1.5, 0, z2);
-
-      const isAlt = (s + Math.floor(speedOffset * 0.1)) % 2 === 0;
-      ctx.fillStyle = isAlt ? '#ff6b1a' : '#ffd152';
-
-      // Left Illuminated Curb
-      ctx.beginPath();
-      ctx.moveTo(pL1.x, pL1.y);
-      ctx.lineTo(pL2.x, pL2.y);
-      ctx.lineTo(pL2.x - 9 * pL2.scale, pL2.y);
-      ctx.lineTo(pL1.x - 9 * pL1.scale, pL1.y);
-      ctx.closePath();
-      ctx.fill();
-
-      // Right Illuminated Curb
-      ctx.beginPath();
-      ctx.moveTo(pR1.x, pR1.y);
-      ctx.lineTo(pR2.x, pR2.y);
-      ctx.lineTo(pR2.x + 9 * pR2.scale, pR2.y);
-      ctx.lineTo(pR1.x + 9 * pR1.scale, pR1.y);
-      ctx.closePath();
-      ctx.fill();
-
-      // Curb Flower Petal Sprinkles & Side Diyas
-      if (s % 3 === 0 && pL1.scale > 0.08) {
-        ctx.fillStyle = '#ff8426';
-        ctx.beginPath();
-        ctx.arc(pL1.x + 4 * pL1.scale, pL1.y - 2 * pL1.scale, 2.5 * pL1.scale, 0, Math.PI * 2);
-        ctx.arc(pR1.x - 4 * pR1.scale, pR1.y - 2 * pR1.scale, 2.5 * pR1.scale, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Small glowing clay diyas placed along curbs
-      if (s % 4 === 1 && pL1.scale > 0.1) {
-        // Left diya
-        ctx.fillStyle = '#b45309';
-        ctx.beginPath();
-        ctx.ellipse(pL1.x - 5 * pL1.scale, pL1.y - 2 * pL1.scale, 5 * pL1.scale, 2.5 * pL1.scale, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffd152';
-        ctx.beginPath();
-        ctx.arc(pL1.x - 5 * pL1.scale, pL1.y - 5 * pL1.scale, 2 * pL1.scale, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Right diya
-        ctx.fillStyle = '#b45309';
-        ctx.beginPath();
-        ctx.ellipse(pR1.x + 5 * pR1.scale, pR1.y - 2 * pR1.scale, 5 * pR1.scale, 2.5 * pR1.scale, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffd152';
-        ctx.beginPath();
-        ctx.arc(pR1.x + 5 * pR1.scale, pR1.y - 5 * pR1.scale, 2 * pR1.scale, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Sacred Rangoli / Kolam Mandalas on Sidewalk Pavements
-      if (s % 6 === 2 && pL1.scale > 0.12) {
-        const rScale = pL1.scale;
-        const rangoliRadius = 14 * rScale;
-
-        // Left Sidewalk Rangoli
-        const rangoliLX = pL1.x - 18 * rScale;
-        const rangoliLY = pL1.y;
-        ctx.save();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-        ctx.beginPath();
-        ctx.arc(rangoliLX, rangoliLY, rangoliRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255, 107, 26, 0.6)';
-        ctx.beginPath();
-        ctx.arc(rangoliLX, rangoliLY, rangoliRadius * 0.6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255, 209, 82, 0.8)';
-        ctx.beginPath();
-        ctx.arc(rangoliLX, rangoliLY, rangoliRadius * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Right Sidewalk Rangoli
-        const rangoliRX = pR1.x + 18 * rScale;
-        const rangoliRY = pR1.y;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-        ctx.beginPath();
-        ctx.arc(rangoliRX, rangoliRY, rangoliRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255, 107, 26, 0.6)';
-        ctx.beginPath();
-        ctx.arc(rangoliRX, rangoliRY, rangoliRadius * 0.6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255, 209, 82, 0.8)';
-        ctx.beginPath();
-        ctx.arc(rangoliRX, rangoliRY, rangoliRadius * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-
-    // 4. Moving Lane Dividers with Warm Golden Rim
-    ctx.strokeStyle = '#fff7eb';
-    const dashLength = 50;
-    const dashGap = 50;
-    const dashScroll = (this.game.distance * 3) % (dashLength + dashGap);
-
-    for (let dZ = -dashScroll; dZ < CONFIG.ROAD_LENGTH; dZ += dashLength + dashGap) {
-      if (dZ < 0) continue;
-      const zStart = dZ;
-      const zEnd = Math.min(CONFIG.ROAD_LENGTH, dZ + dashLength);
-
-      const pDiv1Start = persp.project(-0.5, 0, zStart);
-      const pDiv1End = persp.project(-0.5, 0, zEnd);
-      ctx.lineWidth = Math.max(1, 4.0 * pDiv1Start.scale);
-      ctx.beginPath();
-      ctx.moveTo(pDiv1Start.x, pDiv1Start.y);
-      ctx.lineTo(pDiv1End.x, pDiv1End.y);
-      ctx.stroke();
-
-      const pDiv2Start = persp.project(0.5, 0, zStart);
-      const pDiv2End = persp.project(0.5, 0, zEnd);
-      ctx.beginPath();
-      ctx.moveTo(pDiv2Start.x, pDiv2Start.y);
-      ctx.lineTo(pDiv2End.x, pDiv2End.y);
-      ctx.stroke();
-    }
-
-    // 5. Render Continuous 3D Street Architecture & Connected Bazaars (Layer 2)
-    this.renderContinuousFacades(ctx);
-
-    // 6. Render Monumental 3D World Landmarks
-    this.render3DLandmarks(ctx);
-
-    // 7. Render Overhead Light Festoons Spanning across the Road
-    this.renderOverheadFestoons(ctx);
-
-    // 8. Render Dense Roadside Scenery (Sorted Back-to-Front)
-    this.renderRoadsideScenery(ctx);
-
-    ctx.restore();
-  }
-
-  // LAYER 2: CONTINUOUS BAZAAR ARCHITECTURE (Left: Mithai Bazaar, Right: Flower Bazaar)
-  renderContinuousFacades(ctx) {
-    const persp = this.game.perspective;
-    const zStep = 55;
-    const scrollOffset = (this.game.distance * 2.2) % zStep;
-
-    for (let z = CONFIG.ROAD_LENGTH + 60; z >= -zStep; z -= zStep) {
-      const zNear = Math.max(2, z - scrollOffset);
-      const zFar = zNear + zStep;
-
-      // Projection points for Left Facade
-      const pLNearBot = persp.project(-2.5, 0, zNear);
-      const pLFarBot = persp.project(-2.5, 0, zFar);
-      const pLNearTop = persp.project(-2.5, 175, zNear);
-      const pLFarTop = persp.project(-2.5, 175, zFar);
-
-      if (pLNearBot.scale > 0.04) {
-        // --- LEFT BUILDING WALL (Mithai Bazaar & Heritage Havelis) ---
-        ctx.save();
-        const bayIndex = Math.floor((this.game.distance + zNear) / zStep);
-        const wallGradL = ctx.createLinearGradient(pLNearTop.x, pLNearTop.y, pLNearBot.x, pLNearBot.y);
-        wallGradL.addColorStop(0, '#5a1226'); // Rich Crimson Haveli upper
-        wallGradL.addColorStop(0.5, '#7f1d1d');
-        wallGradL.addColorStop(1, '#991b1b'); // Terracotta ground floor
-        ctx.fillStyle = wallGradL;
-
-        ctx.beginPath();
-        ctx.moveTo(pLFarTop.x, pLFarTop.y);
-        ctx.lineTo(pLNearTop.x, pLNearTop.y);
-        ctx.lineTo(pLNearBot.x, pLNearBot.y);
-        ctx.lineTo(pLFarBot.x, pLFarBot.y);
-        ctx.closePath();
-        ctx.fill();
-
-        // Upper Floor Jharokha Balcony & Glowing Arched Jali Window
-        const pLWinNear = persp.project(-2.5, 105, zNear + zStep * 0.35);
-        if (pLWinNear.scale > 0.07) {
-          const wScale = pLWinNear.scale;
-          // Amber Window Glow
-          ctx.fillStyle = 'rgba(255, 200, 80, 0.45)';
-          ctx.beginPath();
-          ctx.arc(pLWinNear.x, pLWinNear.y, 16 * wScale, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Arched Window
-          ctx.fillStyle = '#ffd152';
-          ctx.beginPath();
-          ctx.arc(pLWinNear.x, pLWinNear.y, 8 * wScale, Math.PI, Math.PI * 2);
-          ctx.lineTo(pLWinNear.x + 8 * wScale, pLWinNear.y + 12 * wScale);
-          ctx.lineTo(pLWinNear.x - 8 * wScale, pLWinNear.y + 12 * wScale);
-          ctx.closePath();
-          ctx.fill();
-
-          // Jharokha Balcony Base
-          ctx.fillStyle = '#78350f';
-          ctx.fillRect(pLWinNear.x - 12 * wScale, pLWinNear.y + 10 * wScale, 24 * wScale, 6 * wScale);
-        }
-
-        // Ground Floor: Striped Saffron & Gold Shop Awning Canopy
-        const pLAwnNear = persp.project(-2.5, 52, zNear + 6);
-        const pLAwnFar = persp.project(-2.5, 52, zFar - 6);
-        const pLAwnEdgeNear = persp.project(-2.1, 42, zNear + 6);
-        const pLAwnEdgeFar = persp.project(-2.1, 42, zFar - 6);
-
-        ctx.fillStyle = (bayIndex % 2 === 0) ? '#ff8426' : '#ea580c';
-        ctx.beginPath();
-        ctx.moveTo(pLAwnFar.x, pLAwnFar.y);
-        ctx.lineTo(pLAwnNear.x, pLAwnNear.y);
-        ctx.lineTo(pLAwnEdgeNear.x, pLAwnEdgeNear.y);
-        ctx.lineTo(pLAwnEdgeFar.x, pLAwnEdgeFar.y);
-        ctx.closePath();
-        ctx.fill();
-
-        // Awning Gold Stripes
-        ctx.strokeStyle = '#ffd152';
-        ctx.lineWidth = Math.max(1, 2.5 * pLAwnNear.scale);
-        ctx.beginPath();
-        ctx.moveTo((pLAwnFar.x + pLAwnNear.x) * 0.5, (pLAwnFar.y + pLAwnNear.y) * 0.5);
-        ctx.lineTo((pLAwnEdgeFar.x + pLAwnEdgeNear.x) * 0.5, (pLAwnEdgeFar.y + pLAwnEdgeNear.y) * 0.5);
-        ctx.stroke();
-
-        // Warm Shop Interior Glow
-        const pLShop = persp.project(-2.5, 18, zNear + zStep * 0.5);
-        if (pLShop.scale > 0.08) {
-          ctx.fillStyle = 'rgba(255, 209, 82, 0.25)';
-          ctx.fillRect(pLShop.x - 22 * pLShop.scale, pLShop.y - 18 * pLShop.scale, 44 * pLShop.scale, 36 * pLShop.scale);
-
-          // Tiered Brass Thalis with Modaks
-          ctx.fillStyle = '#ffd152';
-          ctx.fillRect(pLShop.x - 18 * pLShop.scale, pLShop.y + 4 * pLShop.scale, 36 * pLShop.scale, 3 * pLShop.scale);
-          ctx.fillStyle = '#fff7eb';
-          for (let m = -14; m <= 14; m += 7) {
-            ctx.beginPath();
-            ctx.arc(pLShop.x + m * pLShop.scale, pLShop.y + 1 * pLShop.scale, 3 * pLShop.scale, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        // Connecting Arch Spanning Adjacent Bays
-        ctx.strokeStyle = '#b45309';
-        ctx.lineWidth = Math.max(1.5, 4 * pLNearBot.scale);
-        ctx.beginPath();
-        ctx.moveTo(pLNearTop.x, pLNearTop.y);
-        ctx.lineTo(pLFarTop.x, pLFarTop.y);
-        ctx.stroke();
-
-        // Rooftop Fairy Light Garland
-        ctx.strokeStyle = '#ffd152';
-        ctx.lineWidth = Math.max(1, 2 * pLNearTop.scale);
-        ctx.beginPath();
-        ctx.moveTo(pLFarTop.x, pLFarTop.y);
-        ctx.quadraticCurveTo((pLFarTop.x + pLNearTop.x) * 0.5, (pLFarTop.y + pLNearTop.y) * 0.5 + 8 * pLNearTop.scale, pLNearTop.x, pLNearTop.y);
-        ctx.stroke();
-
-        ctx.restore();
-      }
-
-      // Projection points for Right Facade
-      const pRNearBot = persp.project(2.5, 0, zNear);
-      const pRFarBot = persp.project(2.5, 0, zFar);
-      const pRNearTop = persp.project(2.5, 175, zNear);
-      const pRFarTop = persp.project(2.5, 175, zFar);
-
-      if (pRNearBot.scale > 0.04) {
-        // --- RIGHT BUILDING WALL (Flower Bazaar & Festival Shrines) ---
-        ctx.save();
-        const bayIndexR = Math.floor((this.game.distance + zNear + 20) / zStep);
-        const wallGradR = ctx.createLinearGradient(pRNearTop.x, pRNearTop.y, pRNearBot.x, pRNearBot.y);
-        wallGradR.addColorStop(0, '#4a154b'); // Royal Plum upper
-        wallGradR.addColorStop(0.5, '#78350f');
-        wallGradR.addColorStop(1, '#92400e'); // Warm Teak bazaar
-        ctx.fillStyle = wallGradR;
-
-        ctx.beginPath();
-        ctx.moveTo(pRFarTop.x, pRFarTop.y);
-        ctx.lineTo(pRNearTop.x, pRNearTop.y);
-        ctx.lineTo(pRNearBot.x, pRNearBot.y);
-        ctx.lineTo(pRFarBot.x, pRFarBot.y);
-        ctx.closePath();
-        ctx.fill();
-
-        // Upper Floor Jharokha Balcony & Arch Window
-        const pRWinNear = persp.project(2.5, 105, zNear + zStep * 0.35);
-        if (pRWinNear.scale > 0.07) {
-          const wScale = pRWinNear.scale;
-          // Amber Window Glow
-          ctx.fillStyle = 'rgba(255, 200, 80, 0.45)';
-          ctx.beginPath();
-          ctx.arc(pRWinNear.x, pRWinNear.y, 16 * wScale, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Arched Window
-          ctx.fillStyle = '#ffd152';
-          ctx.beginPath();
-          ctx.arc(pRWinNear.x, pRWinNear.y, 8 * wScale, Math.PI, Math.PI * 2);
-          ctx.lineTo(pRWinNear.x + 8 * wScale, pRWinNear.y + 12 * wScale);
-          ctx.lineTo(pRWinNear.x - 8 * wScale, pRWinNear.y + 12 * wScale);
-          ctx.closePath();
-          ctx.fill();
-
-          // Hanging Star Kandil Lantern
-          ctx.fillStyle = '#f43f5e';
-          ctx.beginPath();
-          ctx.moveTo(pRWinNear.x, pRWinNear.y + 18 * wScale);
-          ctx.lineTo(pRWinNear.x + 6 * wScale, pRWinNear.y + 26 * wScale);
-          ctx.lineTo(pRWinNear.x, pRWinNear.y + 34 * wScale);
-          ctx.lineTo(pRWinNear.x - 6 * wScale, pRWinNear.y + 26 * wScale);
-          ctx.closePath();
-          ctx.fill();
-        }
-
-        // Ground Floor: Flower Bazaar Bamboo Awning with Cascading Marigold Garlands
-        const pRAwnNear = persp.project(2.5, 52, zNear + 6);
-        const pRAwnFar = persp.project(2.5, 52, zFar - 6);
-        const pRAwnEdgeNear = persp.project(2.1, 42, zNear + 6);
-        const pRAwnEdgeFar = persp.project(2.1, 42, zFar - 6);
-
-        ctx.fillStyle = (bayIndexR % 2 === 0) ? '#d97706' : '#b45309';
-        ctx.beginPath();
-        ctx.moveTo(pRAwnFar.x, pRAwnFar.y);
-        ctx.lineTo(pRAwnNear.x, pRAwnNear.y);
-        ctx.lineTo(pRAwnEdgeNear.x, pRAwnEdgeNear.y);
-        ctx.lineTo(pRAwnEdgeFar.x, pRAwnEdgeFar.y);
-        ctx.closePath();
-        ctx.fill();
-
-        // Cascading Marigold Garland Curtains along Flower Stall
-        const pRShop = persp.project(2.5, 18, zNear + zStep * 0.5);
-        if (pRShop.scale > 0.08) {
-          const sScale = pRShop.scale;
-          // Hanging Marigold Garlands
-          for (let col = -16; col <= 16; col += 8) {
-            ctx.fillStyle = (col % 16 === 0) ? '#ffd152' : '#ff8426';
-            for (let row = -14; row <= 16; row += 7) {
-              ctx.beginPath();
-              ctx.arc(pRShop.x + col * sScale, pRShop.y + row * sScale, 2.8 * sScale, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-          // Red Rose Petal Basket at counter base
-          ctx.fillStyle = '#dc2626';
-          ctx.beginPath();
-          ctx.ellipse(pRShop.x, pRShop.y + 14 * sScale, 12 * sScale, 5 * sScale, 0, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // Rooftop Fairy Light Garland
-        ctx.strokeStyle = '#ffd152';
-        ctx.lineWidth = Math.max(1, 2 * pRNearTop.scale);
-        ctx.beginPath();
-        ctx.moveTo(pRFarTop.x, pRFarTop.y);
-        ctx.quadraticCurveTo((pRFarTop.x + pRNearTop.x) * 0.5, (pRFarTop.y + pRNearTop.y) * 0.5 + 8 * pRNearTop.scale, pRNearTop.x, pRNearTop.y);
-        ctx.stroke();
-
-        ctx.restore();
-      }
-    }
-  }
-
-  // MONUMENTAL 3D WORLD LANDMARKS
-  render3DLandmarks(ctx) {
-    const dist = this.game.distance;
-    const persp = this.game.perspective;
-
-    // 1. FESTIVAL ENTRANCE GATEWAY (Active around 0 - 150m)
-    if (dist < 150) {
-      const zGate = 100 - dist;
-      if (zGate > 5 && zGate < CONFIG.ROAD_LENGTH) {
-        this.renderWelcomeToranGateway(ctx, zGate);
-      }
-    }
-
-    // 2. DHOL CHOWK PERFORMANCE PAVILION (Active around 350 - 650m)
-    if (dist >= 350 && dist < 650) {
-      const zChowk = 500 - dist;
-      if (zChowk > 5 && zChowk < CONFIG.ROAD_LENGTH) {
-        this.renderDholChowkPavilion(ctx, zChowk);
-      }
-    }
-
-    // 3. FLOWER BAZAAR GRAND ARCADE (Active around 850 - 1200m)
-    if (dist >= 850 && dist < 1200) {
-      const zFlower = 1000 - dist;
-      if (zFlower > 5 && zFlower < CONFIG.ROAD_LENGTH) {
-        this.renderFlowerBazaarArcade(ctx, zFlower);
-      }
-    }
-
-    // 4. GRAND PANDAL STREET GATE (Active around 1300 - 1700m)
-    if (dist >= 1300 && dist < 1700) {
-      const zPandal = 1500 - dist;
-      if (zPandal > 5 && zPandal < CONFIG.ROAD_LENGTH) {
-        this.renderGrandPandalGate(ctx, zPandal);
-      }
-    }
-
-    // 5. GANESHA SANCTUM CEREMONIAL ENTRANCE (Active around 2100 - 2400m)
-    if (dist >= 2100) {
-      const zSanctum = CONFIG.DESTINATION_DISTANCE - dist;
-      if (zSanctum > 5 && zSanctum < CONFIG.ROAD_LENGTH) {
-        this.renderGaneshaSanctumEntrance(ctx, zSanctum);
-      }
-    }
-  }
-
-  // 1. Monumental Welcome Toran Gateway
-  renderWelcomeToranGateway(ctx, z) {
-    const persp = this.game.perspective;
-    const pL = persp.project(-2.5, 0, z);
-    const pR = persp.project(2.5, 0, z);
-    const pTopMid = persp.project(0, 155, z);
-    const scale = pTopMid.scale;
-    if (scale <= 0.05) return;
-
-    ctx.save();
-    // Massive Carved Golden Pillars
-    ctx.fillStyle = '#ffd152';
-    const pw = 24 * scale;
-    const ph = 160 * scale;
-    ctx.fillRect(pL.x - pw * 0.5, pL.y - ph, pw, ph);
-    ctx.fillRect(pR.x - pw * 0.5, pR.y - ph, pw, ph);
-
-    // Green Banana Stems at base
-    ctx.fillStyle = '#15803d';
-    ctx.fillRect(pL.x - pw * 0.8, pL.y - ph * 0.45, pw * 0.6, ph * 0.45);
-    ctx.fillRect(pR.x + pw * 0.2, pR.y - ph * 0.45, pw * 0.6, ph * 0.45);
-
-    // Multi-tier Crimson Arch spanning across road
-    ctx.fillStyle = '#b91c1c';
-    ctx.beginPath();
-    ctx.moveTo(pL.x, pL.y - ph * 0.8);
-    ctx.quadraticCurveTo(pTopMid.x, pTopMid.y - 20 * scale, pR.x, pR.y - ph * 0.8);
-    ctx.lineTo(pR.x, pR.y - ph);
-    ctx.quadraticCurveTo(pTopMid.x, pTopMid.y - 45 * scale, pL.x, pL.y - ph);
-    ctx.closePath();
-    ctx.fill();
-
-    // Golden Kalash Finials atop Arch
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(pTopMid.x, pTopMid.y - 46 * scale, 12 * scale, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Sanskrit Welcome Signboard: ॥ स्वागतम् ॥
-    ctx.fillStyle = '#ffd152';
-    ctx.font = `bold ${Math.max(10, 16 * scale)}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('॥ स्वागतम् ॥', pTopMid.x, pTopMid.y - 28 * scale);
-
-    // Hanging Marigold Garlands & Brass Bells
-    for (let b = 1; b < 6; b++) {
-      const bx = pL.x + (pR.x - pL.x) * (b / 6);
-      const by = (pL.y - ph * 0.8) + Math.sin(b / 6 * Math.PI) * 20 * scale;
-      ctx.fillStyle = '#ffd152';
-      ctx.beginPath();
-      ctx.arc(bx, by + 12 * scale, 5 * scale, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  // 2. Dhol Chowk Elevated Performance Pavilion
-  renderDholChowkPavilion(ctx, z) {
-    const persp = this.game.perspective;
-    const pStage = persp.project(-3.2, 0, z);
-    const scale = pStage.scale;
-    if (scale <= 0.05) return;
-
-    ctx.save();
-    ctx.translate(pStage.x, pStage.y);
-    ctx.scale(scale, scale);
-
-    // Elevated Saffron Wooden Stage
-    ctx.fillStyle = '#9a3412';
-    ctx.fillRect(-65, -35, 130, 35);
-    ctx.fillStyle = '#ea580c';
-    ctx.fillRect(-70, -42, 140, 9);
-
-    // Golden Railing
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-65, -55, 130, 5);
-    for (let r = -60; r <= 60; r += 20) {
-      ctx.fillRect(r, -55, 4, 15);
-    }
-
-    // 4 Animated Dholak Drummers beating in rhythm
-    const beat = Math.sin(Date.now() * 0.016);
-    for (let d = -45; d <= 45; d += 30) {
-      // Drummer body
-      ctx.fillStyle = '#ff6b1a';
-      ctx.fillRect(d - 8, -95, 16, 28);
-      ctx.fillStyle = '#fff7eb';
-      ctx.fillRect(d - 9, -68, 18, 18);
-      // Kolhapuri Pagdi
-      ctx.fillStyle = '#dc2626';
-      ctx.beginPath();
-      ctx.arc(d, -106, 8, Math.PI, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffd152';
-      ctx.fillRect(d - 2, -112, 4, 6);
-      // Dhol Drum
-      ctx.fillStyle = '#78350f';
-      ctx.beginPath();
-      ctx.ellipse(d, -82, 14, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // Animated Striking Arms
-      ctx.strokeStyle = '#ffd152';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(d - 8, -90);
-      ctx.lineTo(d - 2, -82 + beat * 6);
-      ctx.moveTo(d + 8, -90);
-      ctx.lineTo(d + 2, -82 - beat * 6);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  // 3. Flower Bazaar Grand Floral Arcade
-  renderFlowerBazaarArcade(ctx, z) {
-    const persp = this.game.perspective;
-    const pL = persp.project(-2.6, 0, z);
-    const pR = persp.project(2.6, 0, z);
-    const pMid = persp.project(0, 145, z);
-    const scale = pMid.scale;
-    if (scale <= 0.05) return;
-
-    ctx.save();
-    // Flowered Trellis Columns
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(pL.x - 8 * scale, pL.y - 145 * scale, 16 * scale, 145 * scale);
-    ctx.fillRect(pR.x - 8 * scale, pR.y - 145 * scale, 16 * scale, 145 * scale);
-
-    // Cascading Marigold Chandeliers across the road
-    for (let c = 1; c < 8; c++) {
-      const cx = pL.x + (pR.x - pL.x) * (c / 8);
-      const cy = pMid.y + Math.sin(c / 8 * Math.PI) * 18 * scale;
-      for (let r = 0; r < 5; r++) {
-        ctx.fillStyle = (r % 2 === 0) ? '#ffd152' : '#ff8426';
-        ctx.beginPath();
-        ctx.arc(cx, cy + r * 10 * scale, 4.5 * scale, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.restore();
-  }
-
-  // 4. Grand Pandal Street Towering Gateway
-  renderGrandPandalGate(ctx, z) {
-    const persp = this.game.perspective;
-    const pL = persp.project(-2.7, 0, z);
-    const pR = persp.project(2.7, 0, z);
-    const pMid = persp.project(0, 185, z);
-    const scale = pMid.scale;
-    if (scale <= 0.05) return;
-
-    ctx.save();
-    // Towering Crimson Pandal Gateway with Multi-tier Shikharas
-    ctx.fillStyle = '#7f1d1d';
-    ctx.fillRect(pL.x - 18 * scale, pL.y - 170 * scale, 36 * scale, 170 * scale);
-    ctx.fillRect(pR.x - 18 * scale, pR.y - 170 * scale, 36 * scale, 170 * scale);
-
-    // Arch Overhead
-    ctx.fillStyle = '#b91c1c';
-    ctx.beginPath();
-    ctx.moveTo(pL.x, pL.y - 120 * scale);
-    ctx.quadraticCurveTo(pMid.x, pMid.y - 25 * scale, pR.x, pR.y - 120 * scale);
-    ctx.lineTo(pR.x, pR.y - 165 * scale);
-    ctx.quadraticCurveTo(pMid.x, pMid.y - 65 * scale, pL.x, pL.y - 165 * scale);
-    ctx.closePath();
-    ctx.fill();
-
-    // Golden Kalash Finials
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(pMid.x, pMid.y - 68 * scale, 14 * scale, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Sacred Om Symbol in Gate Center
-    ctx.fillStyle = '#ffd152';
-    ctx.font = `bold ${Math.max(12, 22 * scale)}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('ॐ', pMid.x, pMid.y - 35 * scale);
-    ctx.restore();
-  }
-
-  // 5. Ganesha Sanctum Ceremonial Entrance
-  renderGaneshaSanctumEntrance(ctx, z) {
-    const persp = this.game.perspective;
-    const pL = persp.project(-2.8, 0, z);
-    const pR = persp.project(2.8, 0, z);
-    const pMid = persp.project(0, 210, z);
-    const scale = pMid.scale;
-    if (scale <= 0.05) return;
-
-    ctx.save();
-    // Radiant Golden Light Beam
-    const beam = ctx.createLinearGradient(pMid.x, pMid.y - 80 * scale, pMid.x, pL.y);
-    beam.addColorStop(0, 'rgba(255, 230, 120, 0.85)');
-    beam.addColorStop(0.5, 'rgba(255, 160, 20, 0.45)');
-    beam.addColorStop(1, 'rgba(255, 100, 10, 0)');
-    ctx.fillStyle = beam;
-    ctx.beginPath();
-    ctx.moveTo(pMid.x - 80 * scale, pMid.y - 80 * scale);
-    ctx.lineTo(pMid.x + 80 * scale, pMid.y - 80 * scale);
-    ctx.lineTo(pR.x + 40 * scale, pR.y);
-    ctx.lineTo(pL.x - 40 * scale, pL.y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // OVERHEAD FESTIVE LIGHT FESTOONS (Connecting left and right buildings across the street)
-  renderOverheadFestoons(ctx) {
-    const persp = this.game.perspective;
-    const sorted = [...this.overheadFestoons].sort((a, b) => b.z - a.z);
-    const pulse = Math.sin(Date.now() * 0.004) * 0.25 + 0.75;
-
-    sorted.forEach(f => {
-      const pL = persp.project(-2.5, 95, f.z);
-      const pR = persp.project(2.5, 95, f.z);
-      const pMid = persp.project(0, 68, f.z);
-      const scale = pMid.scale;
-      if (scale <= 0.05) return;
-
-      ctx.save();
-      // Sagging Catenary Garland string
-      ctx.strokeStyle = '#d97706';
-      ctx.lineWidth = Math.max(1.5, 3.5 * scale);
-      ctx.beginPath();
-      ctx.moveTo(pL.x, pL.y);
-      ctx.quadraticCurveTo(pMid.x, pMid.y, pR.x, pR.y);
-      ctx.stroke();
-
-      // Hanging Marigold Beads & Fairy Lights with Pulsing Glow
-      const lightCount = 9;
-      for (let i = 1; i < lightCount; i++) {
-        const t = i / lightCount;
-        const lx = (1 - t) * (1 - t) * pL.x + 2 * (1 - t) * t * pMid.x + t * t * pR.x;
-        const ly = (1 - t) * (1 - t) * pL.y + 2 * (1 - t) * t * pMid.y + t * t * pR.y;
-
-        // Glowing Fairy Light halo
-        const color = (i % 2 === 0) ? '#ffd152' : '#ff8426';
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 8 * pulse;
-        ctx.beginPath();
-        ctx.arc(lx, ly, Math.max(1.5, 4.5 * scale), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // Hanging Mango leaf / flower tassel
-        if (scale > 0.11 && i % 2 === 1) {
-          ctx.fillStyle = '#15803d';
-          ctx.beginPath();
-          ctx.moveTo(lx, ly);
-          ctx.lineTo(lx + 2.5 * scale, ly + 9 * scale);
-          ctx.lineTo(lx - 2.5 * scale, ly + 9 * scale);
-          ctx.closePath();
-          ctx.fill();
-        }
-      }
-
-      // Center Star Kandil hanging overhead with flutter ribbons
-      if (scale > 0.12) {
-        ctx.fillStyle = '#f43f5e';
-        ctx.shadowColor = '#ffd152';
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.moveTo(pMid.x, pMid.y + 2 * scale);
-        ctx.lineTo(pMid.x + 7 * scale, pMid.y + 11 * scale);
-        ctx.lineTo(pMid.x, pMid.y + 20 * scale);
-        ctx.lineTo(pMid.x - 7 * scale, pMid.y + 11 * scale);
-        ctx.closePath();
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // Fluttering Golden Ribbons
-        ctx.fillStyle = '#ffd152';
-        const ribbonWiggle = Math.sin(Date.now() * 0.006 + f.z) * 3 * scale;
-        ctx.fillRect(pMid.x - 4 * scale, pMid.y + 20 * scale, 2 * scale, 12 * scale);
-        ctx.fillRect(pMid.x + 2 * scale + ribbonWiggle, pMid.y + 20 * scale, 2 * scale, 14 * scale);
-      }
-      ctx.restore();
-    });
-  }
-
-  // DENSE ROADSIDE SCENERY RENDERER
-  renderRoadsideScenery(ctx) {
-    const persp = this.game.perspective;
-    const sorted = [...this.scenery].sort((a, b) => b.z - a.z);
-
-    sorted.forEach(item => {
-      const proj = persp.project(item.x, 0, item.z);
-      const scale = proj.scale;
-      if (scale <= 0.04) return;
-
-      ctx.save();
-      ctx.translate(proj.x, proj.y);
-      ctx.scale(scale * (item.flip ? -1 : 1), scale);
-
-      switch (item.type) {
-        case 'STALL_MODAK':
-          this.renderModakStall(ctx);
-          break;
-        case 'STALL_FLOWERS':
-          this.renderFlowerStall(ctx);
-          break;
-        case 'DHOL_GROUP':
-          this.renderDholGroup(ctx);
-          break;
-        case 'CROWD_CHEER':
-          this.renderCrowdCheer(ctx);
-          break;
-        case 'GRAND_PANDAL':
-          this.renderGrandPandal(ctx);
-          break;
-        case 'PANDAL_GATE':
-          this.renderPandalGate(ctx);
-          break;
-        case 'FESTIVAL_BANNER':
-          this.renderFestivalBanner(ctx);
-          break;
-        case 'PEDESTAL_DIYA':
-          this.renderPedestalDiya(ctx);
-          break;
-        case 'KANDIL_LIGHTS':
-          this.renderKandilLights(ctx);
-          break;
-        case 'FESTIVE_UMBRELLA':
-          this.renderFestiveUmbrella(ctx);
-          break;
-      }
-      ctx.restore();
-    });
-  }
-
-  // 1. Large Decorated Modak & Mithai Shop
-  renderModakStall(ctx) {
-    // Warm Interior Glow
-    ctx.fillStyle = 'rgba(255, 209, 82, 0.25)';
-    ctx.fillRect(-55, -80, 110, 80);
-
-    // Carved Wooden Counter
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(-50, -45, 100, 45);
-
-    // Striped Saffron & Gold Awning Canopy
-    ctx.fillStyle = '#ff8426';
-    ctx.beginPath();
-    ctx.moveTo(-60, -82);
-    ctx.lineTo(0, -108);
-    ctx.lineTo(60, -82);
-    ctx.lineTo(55, -68);
-    ctx.lineTo(-55, -68);
-    ctx.closePath();
-    ctx.fill();
-
-    // Yellow Awning Stripes
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-35, -88, 14, 20);
-    ctx.fillRect(18, -88, 14, 20);
-
-    // Bamboo Frame Posts
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(-56, -82, 6, 82);
-    ctx.fillRect(50, -82, 6, 82);
-
-    // Hanging Marigold Garlands on Awning
-    ctx.fillStyle = '#ffba08';
-    for (let x = -50; x <= 50; x += 12) {
-      ctx.beginPath();
-      ctx.arc(x, -68, 5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Tiered Brass Platters piled with Modaks
-    ctx.fillStyle = '#ffd152'; // Brass thali
-    ctx.fillRect(-42, -50, 84, 5);
-
-    ctx.fillStyle = '#fff7eb'; // Modaks
-    for (let m = -34; m <= 34; m += 14) {
-      ctx.beginPath();
-      ctx.moveTo(m, -62);
-      ctx.bezierCurveTo(m + 5, -56, m + 6, -50, m, -50);
-      ctx.bezierCurveTo(m - 6, -50, m - 5, -56, m, -62);
-      ctx.fill();
-    }
-
-    // Glowing Signboard: "मोदक भंडार"
-    ctx.fillStyle = '#d62828';
-    ctx.fillRect(-32, -36, 64, 16);
-    ctx.fillStyle = '#ffd152';
-    ctx.font = 'bold 9px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('मोदक 🍬', 0, -24);
-  }
-
-  // 2. Large Flower Bazaar Stall
-  renderFlowerStall(ctx) {
-    // Bamboo Stall Frame
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(-48, -90, 6, 90);
-    ctx.fillRect(42, -90, 6, 90);
-    ctx.fillRect(-52, -92, 104, 8);
-
-    // Cascading Marigold Curtains (Hundreds of flowers in dense rows)
-    for (let col = -42; col <= 42; col += 10) {
-      const isYellow = (col % 20 === 0);
-      ctx.fillStyle = isYellow ? '#ffd152' : '#ff8426';
-      for (let row = -84; row <= -22; row += 9) {
-        ctx.beginPath();
-        ctx.arc(col, row, 4.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    // Rose Petal Basket Counter
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(-44, -22, 88, 22);
-
-    ctx.fillStyle = '#dc2626'; // Deep Red Rose heaps
-    ctx.beginPath();
-    ctx.arc(-22, -22, 14, Math.PI, Math.PI * 2);
-    ctx.arc(22, -22, 14, Math.PI, Math.PI * 2);
-    ctx.fill();
-
-    // Hanging Floral Chandelier
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(0, -96, 6, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // 3. Dhol-Tasha Drum Group (Animated arms swinging drumsticks in rhythm)
-  renderDholGroup(ctx) {
-    const beatPhase = Math.sin(Date.now() * 0.016);
-
-    for (let i = 0; i < 2; i++) {
-      const dx = (i === 0) ? -22 : 22;
-
-      // Drummer Body (Saffron Kurta)
-      ctx.fillStyle = (i === 0) ? '#ff6b1a' : '#ea580c';
-      ctx.fillRect(dx - 11, -58, 22, 38);
-
-      // White Silk Dhoti with Gold Border
-      ctx.fillStyle = '#fff7eb';
-      ctx.fillRect(dx - 12, -20, 24, 20);
-      ctx.fillStyle = '#ffd152';
-      ctx.fillRect(dx - 12, -2, 24, 2);
-
-      // Head & Kolhapuri Pagdi with Gold Kalgi
-      ctx.fillStyle = '#e0a876';
-      ctx.beginPath();
-      ctx.arc(dx, -68, 9, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#dc2626';
-      ctx.beginPath();
-      ctx.arc(dx, -74, 11, Math.PI, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ffd152'; // Gold Kalgi
-      ctx.fillRect(dx - 2, -83, 4, 9);
-
-      // Traditional Dhol Drum slung across chest
-      ctx.fillStyle = '#78350f';
-      ctx.beginPath();
-      ctx.ellipse(dx, -36, 19, 13, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = '#ffd152';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      // Drumsticks beating dynamically in rhythm
-      ctx.strokeStyle = '#ffd152';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(dx - 10, -50);
-      ctx.lineTo(dx - 3, -36 + beatPhase * 8);
-      ctx.moveTo(dx + 10, -50);
-      ctx.lineTo(dx + 3, -36 - beatPhase * 8);
-      ctx.stroke();
-    }
-  }
-
-  // 4. Cheering Devotee Crowd (Varied Heights, Poses & Waving Saffron Flags)
-  renderCrowdCheer(ctx) {
-    const flagWave = Math.sin(Date.now() * 0.008) * 10;
-
-    // Diverse Devotee Silhouettes (Adults, Children, Dancers)
-    const crowdMembers = [
-      { x: -32, h: 48, w: 9, color: '#ff6b1a', dhoti: '#fff7eb', arm: -52 },
-      { x: -16, h: 36, w: 7, color: '#f59e0b', dhoti: '#fef08a', arm: -40 }, // Child devotee
-      { x: 0,   h: 52, w: 10, color: '#dc2626', dhoti: '#fff7eb', arm: -58 },
-      { x: 16,  h: 46, w: 9, color: '#d97706', dhoti: '#fed7aa', arm: -50 },
-      { x: 32,  h: 50, w: 10, color: '#e11d48', dhoti: '#fff7eb', arm: -56 }
-    ];
-
-    crowdMembers.forEach(m => {
-      // Body (Kurta/Saree)
-      ctx.fillStyle = m.color;
-      ctx.fillRect(m.x - m.w * 0.5, -m.h + 16, m.w, m.h - 16);
-
-      // Dhoti/Lower Garment
-      ctx.fillStyle = m.dhoti;
-      ctx.fillRect(m.x - m.w * 0.5, -16, m.w, 16);
-
-      // Head
-      ctx.fillStyle = '#e0a876';
-      ctx.beginPath();
-      ctx.arc(m.x, -m.h + 8, m.w * 0.55, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Raised Cheering Arms
-      ctx.strokeStyle = m.color;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(m.x - m.w * 0.3, -m.h + 20);
-      ctx.lineTo(m.x - m.w * 0.7, m.arm);
-      ctx.moveTo(m.x + m.w * 0.3, -m.h + 20);
-      ctx.lineTo(m.x + m.w * 0.7, m.arm);
-      ctx.stroke();
-    });
-
-    // Sacred Saffron Flag held high
-    ctx.strokeStyle = '#92400e';
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
-    ctx.moveTo(0, -10);
-    ctx.lineTo(0, -92);
-    ctx.stroke();
-
-    ctx.fillStyle = '#ff6b1a';
-    ctx.beginPath();
-    ctx.moveTo(0, -92);
-    ctx.lineTo(34 + flagWave, -78);
-    ctx.lineTo(0, -64);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  // 5. Grand Illuminated Festival Pandal (Towering structure)
-  renderGrandPandal(ctx) {
-    // Multi-tier Pandal Walls & Roof
-    ctx.fillStyle = '#7f1d1d';
-    ctx.fillRect(-65, -120, 130, 120);
-
-    // Ornate Golden Temple Arch
-    ctx.strokeStyle = '#ffd152';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(0, -80, 42, Math.PI, Math.PI * 2);
-    ctx.stroke();
-
-    // Tiered Crimson & Gold Shikhara Roof
-    ctx.fillStyle = '#b91c1c';
-    ctx.beginPath();
-    ctx.moveTo(-75, -120);
-    ctx.lineTo(0, -165);
-    ctx.lineTo(75, -120);
-    ctx.closePath();
-    ctx.fill();
-
-    // Golden Kalash Finial
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(0, -170, 8, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Illuminated Fairy Lights along roofline
-    const dots = 9;
-    for (let d = 0; d < dots; d++) {
-      const tx = -68 + (d * 17);
-      const ty = -120 - Math.sin((d / (dots - 1)) * Math.PI) * 40;
-      ctx.fillStyle = (d % 2 === 0) ? '#ffd152' : '#ff6b1a';
-      ctx.beginPath();
-      ctx.arc(tx, ty, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Large Ganesha Emblem in Pandal Arch
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(0, -78, 16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#7f1d1d';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('ॐ', 0, -78);
-  }
-
-  // 6. Pandal Gate Column with Banana Stems
-  renderPandalGate(ctx) {
-    ctx.fillStyle = '#d97706';
-    ctx.fillRect(-12, -90, 24, 90);
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-16, -96, 32, 8);
-    ctx.fillRect(-16, -8, 32, 8);
-
-    // Green Banana Stem at base with Coconuts
-    ctx.fillStyle = '#15803d';
-    ctx.fillRect(-18, -60, 10, 60);
-    ctx.fillStyle = '#ea580c';
-    ctx.beginPath();
-    ctx.arc(-13, -56, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Brass Samai Diya atop pillar
-    ctx.fillStyle = '#ffd152';
-    ctx.beginPath();
-    ctx.arc(0, -102, 6, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // 7. Festival Banner
-  renderFestivalBanner(ctx) {
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(-34, -75, 5, 75);
-    ctx.fillRect(29, -75, 5, 75);
-
-    ctx.fillStyle = '#d62828';
-    ctx.fillRect(-32, -70, 64, 34);
-
-    ctx.fillStyle = '#ffd152';
-    for (let t = -30; t <= 30; t += 8) {
-      ctx.fillRect(t, -36, 4, 8);
-    }
-
-    ctx.fillStyle = '#ffd152';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('॥ जय गणेश ॥', 0, -52);
-  }
-
-  // 8. Ornate Brass Pedestal Diya (Samai Lamp with Glowing Flames)
-  renderPedestalDiya(ctx) {
-    // Stone Plinth
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(-14, -6, 28, 6);
-
-    // Carved Brass Stem
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-3.5, -45, 7, 40);
-
-    // 3 Tiers of Oil Lamps
-    [-20, -32, -45].forEach((ly, idx) => {
-      const radius = 18 - idx * 4;
-      ctx.fillStyle = '#d97706';
-      ctx.beginPath();
-      ctx.ellipse(0, ly, radius, 4.5, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Glowing Flames
-      ctx.fillStyle = '#ff8426';
-      ctx.shadowColor = '#ffd152';
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(-radius * 0.7, ly - 4, 3, 0, Math.PI * 2);
-      ctx.arc(0, ly - 5, 3.5, 0, Math.PI * 2);
-      ctx.arc(radius * 0.7, ly - 4, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    });
-  }
-
-  // 9. Hanging Star Kandil Lantern Post
-  renderKandilLights(ctx) {
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(-4, -85, 4, 85);
-
-    ctx.strokeStyle = '#ffd152';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-4, -85);
-    ctx.lineTo(-24, -62);
-    ctx.stroke();
-
-    // Star Kandil Lantern
-    ctx.fillStyle = '#f43f5e';
-    ctx.shadowColor = '#ffd152';
-    ctx.shadowBlur = 12;
-    ctx.beginPath();
-    ctx.moveTo(-24, -72);
-    ctx.lineTo(-14, -58);
-    ctx.lineTo(-24, -44);
-    ctx.lineTo(-34, -58);
-    ctx.closePath();
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // Golden Streamers
-    ctx.fillStyle = '#ffd152';
-    for (let f = -32; f <= -16; f += 4) {
-      ctx.fillRect(f, -44, 2, 10);
-    }
-  }
-
-  // 10. Traditional Festive Umbrella (Chattri)
-  renderFestiveUmbrella(ctx) {
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(-3, -75, 6, 75);
-
-    // Colorful Fabric Dome
-    ctx.fillStyle = '#e11d48';
-    ctx.beginPath();
-    ctx.arc(0, -75, 32, Math.PI, Math.PI * 2);
-    ctx.fill();
-
-    // Gold Trim & Hanging Tassels
-    ctx.fillStyle = '#ffd152';
-    ctx.fillRect(-34, -75, 68, 5);
-    for (let t = -30; t <= 30; t += 10) {
-      ctx.fillRect(t, -70, 3, 7);
-    }
-  }
-}
-
-// ----------------------------------------------------------------------------
-// 10. MISSION & FESTIVAL JOURNEY MANAGER
+// 10. MISSION MANAGER (Task Progression & Achievements)
 // ----------------------------------------------------------------------------
 class MissionManager {
   constructor(game) {
     this.game = game;
-    this.activeMissions = [];
-    this.pool = [
-      { id: 'MODAK_35', desc: 'Collect 35 Modaks', target: 35, current: 0, reward: 120, type: 'MODAK', icon: '🍬' },
-      { id: 'DIST_800', desc: 'Reach 800 meters', target: 800, current: 0, reward: 150, type: 'DISTANCE', icon: '🏃' },
-      { id: 'NEAR_3', desc: 'Perform 3 Near Misses', target: 3, current: 0, reward: 140, type: 'NEAR_MISS', icon: '✨' },
-      { id: 'COMBO_3', desc: 'Reach x3 Combo', target: 3, current: 0, reward: 100, type: 'COMBO', icon: '🔥' },
-      { id: 'POWER_2', desc: 'Collect 2 Power-Ups', target: 2, current: 0, reward: 150, type: 'POWER_UP', icon: '🛡️' },
-      { id: 'COINS_60', desc: 'Collect 60 Festival Coins', target: 60, current: 0, reward: 180, type: 'COINS', icon: '🪙' }
+    this.missions = [
+      { id: 'MODAK_50', desc: 'Collect 50 Modaks', target: 50, current: 0, completed: false, type: 'MODAK' },
+      { id: 'DIST_800', desc: 'Travel 800m', target: 800, current: 0, completed: false, type: 'DISTANCE' },
+      { id: 'NEAR_MISS_5', desc: 'Perform 5 Near Misses', target: 5, current: 0, completed: false, type: 'NEAR_MISS' },
+      { id: 'COMBO_3', desc: 'Reach 3x Combo', target: 3, current: 0, completed: false, type: 'COMBO' },
+      { id: 'POWER_2', desc: 'Grab 2 Power-Ups', target: 2, current: 0, completed: false, type: 'POWER_UP' }
     ];
+    this.activeMissions = [];
   }
 
   generateMissions() {
-    const shuffled = [...this.pool].sort(() => Math.random() - 0.5);
-    this.activeMissions = shuffled.slice(0, 4).map(m => ({
-      ...m,
-      current: 0,
-      completed: false
-    }));
-    this.renderStartScreenMissions();
+    this.missions.forEach(m => {
+      m.current = 0;
+      m.completed = false;
+    });
+    this.activeMissions = [...this.missions];
     this.updateHUD();
+    this.renderStartMissions();
   }
 
-  track(type, amount = 1) {
+  track(type, value = 1) {
     this.activeMissions.forEach(m => {
-      if (!m.completed && m.type === type) {
+      if (m.type === type && !m.completed) {
         if (type === 'COMBO') {
-          m.current = Math.max(m.current, amount);
+          m.current = Math.max(m.current, value);
         } else {
-          m.current += amount;
+          m.current += value;
         }
 
         if (m.current >= m.target) {
           m.completed = true;
-          this.game.coins += m.reward;
-          this.game.updateCoinsHUD();
           this.game.audio.playPowerUp();
-          this.game.showToast(`✓ TASK COMPLETE! +${m.reward} COINS 🪙`);
-
-          const completedCount = this.activeMissions.filter(x => x.completed).length;
-          if (completedCount === this.activeMissions.length) {
-            this.game.showBannerAlert("🙏 ALL FESTIVAL TASKS COMPLETE!", 2200);
-            this.game.coins += 250;
-            this.game.updateCoinsHUD();
-            // Trigger Grand Visarjan / Ganesha Finale celebration
-            setTimeout(() => {
-              if (this.game.state === 'PLAYING') {
-                this.game.triggerGaneshaDestination();
-              }
-            }, 1200);
-          }
+          this.game.showToast(`MISSION COMPLETED: ${m.desc}! 🚩`);
         }
       }
     });
@@ -3711,251 +3824,292 @@ class MissionManager {
   }
 
   updateHUD() {
-    const fillEl = document.getElementById('hudJourneyFill');
-    const pctEl = document.getElementById('hudJourneyPct');
-    const miniTasksEl = document.getElementById('hudMiniTasks');
+    const container = document.getElementById('hudMiniTasks');
+    if (!container) return;
 
-    const distPct = Math.min(1.0, this.game.distance / CONFIG.DESTINATION_DISTANCE);
-    const completedTasks = this.activeMissions.filter(m => m.completed).length;
-    const taskBonus = (completedTasks / this.activeMissions.length) * 0.2;
-    const totalProgress = Math.min(100, Math.floor((distPct * 0.8 + taskBonus) * 100));
-
-    if (fillEl) fillEl.style.width = totalProgress + '%';
-    if (pctEl) pctEl.textContent = totalProgress + '%';
-
-    if (miniTasksEl) {
-      miniTasksEl.innerHTML = this.activeMissions.map(m => `
-        <span class="task-item ${m.completed ? 'done' : ''}">
-          ${m.icon} ${m.completed ? '✓' : m.current + '/' + m.target}
-        </span>
-      `).join(' • ');
-    }
+    let html = '';
+    this.activeMissions.slice(0, 2).forEach(m => {
+      const pct = Math.min(100, Math.floor((m.current / m.target) * 100));
+      html += `
+        <div class="mini-task-item ${m.completed ? 'completed' : ''}">
+          <span class="task-name">${m.desc}</span>
+          <span class="task-val">${Math.min(m.current, m.target)}/${m.target}</span>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
   }
 
-  renderStartScreenMissions() {
+  renderStartMissions() {
     const list = document.getElementById('startMissionsList');
     if (!list) return;
-    list.innerHTML = this.activeMissions.map(m => `
-      <li class="${m.completed ? 'done' : ''}">
-        <span>${m.icon} ${m.desc}</span>
-        <strong>+${m.reward} 🪙</strong>
-      </li>
-    `).join('');
+
+    let html = '';
+    this.activeMissions.forEach(m => {
+      html += `<li>● ${m.desc}</li>`;
+    });
+    list.innerHTML = html;
   }
 }
 
 // ----------------------------------------------------------------------------
-// 11. INPUT MANAGER (Temple Run Swipe Controls & Desktop Keys)
+// 11. INPUT MANAGER (Keyboard, Mobile Swipe & Pointer Navigation Buttons)
 // ----------------------------------------------------------------------------
 class InputManager {
   constructor(game) {
     this.game = game;
+    this.touchStartX = 0;
+    this.touchStartY = 0;
+    this.touchStartTime = 0;
+    this.minSwipeDist = 28;
+    this.maxSwipeTime = 400;
+
+    // Single Authoritative Movement Dispatcher with 100ms debounce
+    this.lastMoveTime = 0;
+    this.moveDebounceMs = 100;
+    this.bound = false;
+  }
+
+  // Central authoritative movement handler called by ALL input methods
+  // direction: -1 = Left, +1 = Right
+  handleMove(direction) {
+    const now = performance.now();
+    if (now - this.lastMoveTime < this.moveDebounceMs) return false;
+
+    if (this.game.state !== 'PLAYING') return false;
+
+    const moved = this.game.player.movePlayer(direction);
+    if (moved) {
+      this.lastMoveTime = now;
+    }
+    return moved;
   }
 
   bindEvents() {
-    window.addEventListener('keydown', (e) => {
-      if (!this.game.audio.unlocked) {
-        this.game.audio.init();
-      }
+    if (this.bound) return; // Prevent duplicate listeners on restart
+    this.bound = true;
 
-      switch (e.code) {
-        case 'ArrowLeft':
-        case 'KeyA':
-          if (this.game.state === 'PLAYING') this.game.player.moveLeft();
-          break;
-        case 'ArrowRight':
-        case 'KeyD':
-          if (this.game.state === 'PLAYING') this.game.player.moveRight();
-          break;
-        case 'ArrowUp':
-        case 'KeyW':
-        case 'Space':
-          if (this.game.state === 'PLAYING') {
-            e.preventDefault();
-            this.game.player.jump();
-          }
-          break;
-        case 'ArrowDown':
-        case 'KeyS':
-          if (this.game.state === 'PLAYING') {
-            e.preventDefault();
-            this.game.player.slide();
-          }
-          break;
-        case 'KeyP':
-        case 'Escape':
+    // 1. Keyboard Controls
+    window.addEventListener('keydown', (e) => {
+      const code = e.code || '';
+      const key = (e.key || '').toLowerCase();
+
+      if (this.game.state === 'PLAYING') {
+        if (code === 'ArrowLeft' || code === 'KeyA' || key === 'arrowleft' || key === 'a') {
+          e.preventDefault();
+          this.handleMove(-1);
+        } else if (code === 'ArrowRight' || code === 'KeyD' || key === 'arrowright' || key === 'd') {
+          e.preventDefault();
+          this.handleMove(1);
+        } else if (code === 'ArrowUp' || code === 'KeyW' || code === 'Space' || key === 'arrowup' || key === 'w' || key === ' ') {
+          e.preventDefault();
+          this.game.player.jump();
+        } else if (code === 'ArrowDown' || code === 'KeyS' || key === 'arrowdown' || key === 's') {
+          e.preventDefault();
+          this.game.player.slide();
+        } else if (code === 'KeyP' || code === 'Escape' || key === 'p' || key === 'escape') {
           this.game.togglePause();
-          break;
-        case 'KeyM':
-          this.game.toggleSound();
-          break;
+        } else if (code === 'KeyM' || key === 'm') {
+          this.toggleSound();
+        }
+      } else if (code === 'KeyM' || key === 'm') {
+        this.toggleSound();
       }
     });
 
-    const container = document.getElementById('game-container');
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let swipeTriggered = false;
-    const SWIPE_THRESHOLD = 26;
+    // 2. Touch & Swipe Controls (Ignore if touch starts on on-screen navigation buttons)
+    const onTouchStart = (clientX, clientY, target) => {
+      if (target && target.closest && target.closest('#mobileControls')) return;
+      this.touchStartX = clientX;
+      this.touchStartY = clientY;
+      this.touchStartTime = Date.now();
+      if (this.game.audio) this.game.audio.init();
+    };
 
-    container.addEventListener('touchstart', (e) => {
-      if (!this.game.audio.unlocked) this.game.audio.init();
-      const t = e.touches[0];
-      touchStartX = t.clientX;
-      touchStartY = t.clientY;
-      swipeTriggered = false;
-    }, { passive: true });
+    const onTouchEnd = (clientX, clientY, target) => {
+      if (target && target.closest && target.closest('#mobileControls')) return;
+      if (this.game.state !== 'PLAYING') return;
+      const dt = Date.now() - this.touchStartTime;
+      if (dt > this.maxSwipeTime) return;
 
-    container.addEventListener('touchmove', (e) => {
-      if (swipeTriggered || this.game.state !== 'PLAYING') return;
-      const t = e.touches[0];
-      const dx = t.clientX - touchStartX;
-      const dy = t.clientY - touchStartY;
-      const absX = Math.abs(dx);
-      const absY = Math.abs(dy);
+      const dx = clientX - this.touchStartX;
+      const dy = clientY - this.touchStartY;
 
-      if (Math.max(absX, absY) >= SWIPE_THRESHOLD) {
-        swipeTriggered = true;
-        if (absX > absY) {
-          if (dx > 0) this.game.player.moveRight();
-          else this.game.player.moveLeft();
-        } else {
-          if (dy < 0) this.game.player.jump();
-          else this.game.player.slide();
-        }
-      }
-    }, { passive: true });
-
-    container.addEventListener('touchend', (e) => {
-      if (!swipeTriggered && this.game.state === 'PLAYING') {
-        const t = e.changedTouches[0];
-        const dx = t.clientX - touchStartX;
-        const dy = t.clientY - touchStartY;
-        const absX = Math.abs(dx);
-        const absY = Math.abs(dy);
-
-        if (Math.max(absX, absY) >= 20) {
-          if (absX > absY) {
-            if (dx > 0) this.game.player.moveRight();
-            else this.game.player.moveLeft();
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (Math.abs(dx) > this.minSwipeDist) {
+          if (dx > 0) {
+            this.handleMove(1); // Swipe Right => Move Right (+1)
           } else {
-            if (dy < 0) this.game.player.jump();
-            else this.game.player.slide();
+            this.handleMove(-1); // Swipe Left => Move Left (-1)
+          }
+        }
+      } else {
+        if (Math.abs(dy) > this.minSwipeDist) {
+          if (dy > 0) {
+            this.game.player.slide(); // Swipe Down => Slide
+          } else {
+            this.game.player.jump(); // Swipe Up => Jump
           }
         }
       }
-      swipeTriggered = false;
+    };
+
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 0) return;
+      onTouchStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
     }, { passive: true });
 
-    document.getElementById('btnStartGame').addEventListener('click', () => {
+    window.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length === 0) return;
+      onTouchEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY, e.target);
+    }, { passive: true });
+
+    // Mouse drag swipe fallback for testing
+    let isMouseDown = false;
+    window.addEventListener('mousedown', (e) => {
+      if (e.button === 0) {
+        isMouseDown = true;
+        onTouchStart(e.clientX, e.clientY, e.target);
+      }
+    });
+    window.addEventListener('mouseup', (e) => {
+      if (isMouseDown && e.button === 0) {
+        isMouseDown = false;
+        onTouchEnd(e.clientX, e.clientY, e.target);
+      }
+    });
+
+    // 3. On-Screen Buttons with Zero-Latency Pointer Events & Click Deduplication
+    this.bindButtons();
+  }
+
+  bindButtons() {
+    const bindClick = (id, fn) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', fn);
+    };
+
+    bindClick('btnStartGame', () => {
       this.game.audio.init();
-      this.game.audio.playClick();
       this.game.startRun();
     });
 
-    document.getElementById('btnHowToPlay').addEventListener('click', () => {
-      this.game.audio.init();
-      this.game.audio.playClick();
+    bindClick('btnHowToPlay', () => {
       document.getElementById('modalHowToPlay').classList.add('active');
     });
 
-    document.getElementById('btnCloseModal').addEventListener('click', () => {
-      this.game.audio.playClick();
+    bindClick('btnCloseModal', () => {
       document.getElementById('modalHowToPlay').classList.remove('active');
     });
 
-    document.getElementById('btnSoundToggle').addEventListener('click', () => {
-      this.game.audio.init();
-      this.game.toggleSound();
-    });
+    bindClick('btnPauseToggle', () => this.game.togglePause());
+    bindClick('btnResume', () => this.game.resume());
+    bindClick('btnRestart', () => this.game.startRun());
+    bindClick('btnMenuFromPause', () => this.game.showMenu());
+    bindClick('btnRunAgain', () => this.game.startRun());
+    bindClick('btnMenuFromGameOver', () => this.game.showMenu());
+    bindClick('btnRunAgainFinale', () => this.game.startRun());
+    bindClick('btnMenuFromFinale', () => this.game.showMenu());
 
-    document.getElementById('btnToggleSoundStart').addEventListener('click', () => {
-      this.game.audio.init();
-      this.game.toggleSound();
-    });
+    bindClick('btnSoundToggle', () => this.toggleSound());
+    bindClick('btnToggleSoundStart', () => this.toggleSound());
+    bindClick('btnToggleSoundPause', () => this.toggleSound());
 
-    document.getElementById('btnToggleSoundPause').addEventListener('click', () => {
-      this.game.toggleSound();
-    });
+    // Navigation Buttons (Left & Right) with Zero-Latency Pointerdown + Click Deduplication
+    let lastNavPointerTime = 0;
+    const bindNavBtn = (id, direction) => {
+      const el = document.getElementById(id);
+      if (!el) return;
 
-    document.getElementById('btnPauseToggle').addEventListener('click', () => {
-      this.game.audio.playClick();
-      this.game.togglePause();
-    });
+      const onAction = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        const now = performance.now();
+        if (now - lastNavPointerTime < 80) return;
+        lastNavPointerTime = now;
 
-    document.getElementById('btnResume').addEventListener('click', () => {
-      this.game.audio.playClick();
-      this.game.resume();
-    });
+        if (this.game.audio) this.game.audio.init();
+        this.handleMove(direction);
+      };
 
-    document.getElementById('btnRestart').addEventListener('click', () => {
-      this.game.audio.playClick();
-      this.game.startRun();
-    });
+      el.addEventListener('pointerdown', onAction, { passive: false });
+      el.addEventListener('click', (e) => {
+        // Ignore synthetic click dispatched after pointerdown
+        if (performance.now() - lastNavPointerTime < 450) {
+          if (e && e.preventDefault) e.preventDefault();
+          return;
+        }
+        onAction(e);
+      }, { passive: false });
+    };
 
-    document.getElementById('btnMenuFromPause').addEventListener('click', () => {
-      this.game.audio.playClick();
-      this.game.showMenu();
-    });
+    bindNavBtn('btnMobileLeft', -1);
+    bindNavBtn('btnMobileRight', 1);
 
-    document.getElementById('btnRunAgain').addEventListener('click', () => {
-      this.game.audio.playClick();
-      this.game.startRun();
-    });
+    // Jump & Slide Action Buttons with Zero-Latency Pointerdown + Click Deduplication
+    let lastActionPointerTime = 0;
+    const bindActionBtn = (id, fn) => {
+      const el = document.getElementById(id);
+      if (!el) return;
 
-    document.getElementById('btnMenuFromGameOver').addEventListener('click', () => {
-      this.game.audio.playClick();
-      this.game.showMenu();
-    });
+      const onAction = (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        const now = performance.now();
+        if (now - lastActionPointerTime < 80) return;
+        lastActionPointerTime = now;
 
-    document.getElementById('btnRunAgainFinale').addEventListener('click', () => {
-      this.game.audio.playClick();
-      this.game.startRun();
-    });
+        if (this.game.audio) this.game.audio.init();
+        fn();
+      };
 
-    document.getElementById('btnMenuFromFinale').addEventListener('click', () => {
-      this.game.audio.playClick();
-      this.game.showMenu();
-    });
+      el.addEventListener('pointerdown', onAction, { passive: false });
+      el.addEventListener('click', (e) => {
+        if (performance.now() - lastActionPointerTime < 450) {
+          if (e && e.preventDefault) e.preventDefault();
+          return;
+        }
+        onAction(e);
+      }, { passive: false });
+    };
 
-    document.getElementById('btnShareScore').addEventListener('click', () => {
-      this.game.shareScore();
-    });
-
-    const trailSel = document.getElementById('trailSelector');
-    if (trailSel) {
-      trailSel.addEventListener('change', (e) => {
-        this.game.player.trailType = e.target.value;
-      });
-    }
+    bindActionBtn('btnMobileJump', () => this.game.player.jump());
+    bindActionBtn('btnMobileSlide', () => this.game.player.slide());
 
     window.addEventListener('resize', () => {
       this.game.onResize();
     });
   }
+
+  toggleSound() {
+    const active = this.game.audio.toggleMute();
+    const icon = active ? '🔊' : '🔇';
+    const btn = document.getElementById('btnSoundToggle');
+    if (btn) btn.textContent = icon;
+    const startIcon = document.getElementById('startSoundIcon');
+    if (startIcon) startIcon.textContent = icon;
+  }
 }
 
 // ----------------------------------------------------------------------------
-// 12. CENTRAL GAME COORDINATOR & RAF LOOP
+// 12. MASTER GAME ENGINE (Three.js WebGL Core Loop & State Machine)
 // ----------------------------------------------------------------------------
 class Game {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
-    this.ctx = this.canvas.getContext('2d');
 
+    // 1. Initialize Subsystems
     this.audio = new AudioManager();
-    this.perspective = new PerspectiveEngine(this.canvas);
-    this.particles = new ParticleSystem(600);
-    this.player = new Player(this);
-    this.obstacles = new ObstacleManager(this);
-    this.collectibles = new CollectibleManager(this);
+    this.three = new ThreeSceneManager(this.canvas);
+    this.road = new Road3DManager(this);
+    this.player = new Player3D(this);
+    this.obstacles = new Obstacle3DManager(this);
+    this.collectibles = new Collectible3DManager(this);
     this.powerUps = new PowerUpManager(this);
-    this.environment = new EnvironmentManager(this);
+    this.environment = new Environment3DManager(this);
     this.missions = new MissionManager(this);
     this.input = new InputManager(this);
 
+    // 2. Game State & Metrics
     this.state = 'MENU';
-
     this.score = 0;
     this.distance = 0;
     this.modaks = 0;
@@ -3970,24 +4124,8 @@ class Game {
     this.bestCombo = 1;
     this.nearMissCount = 0;
 
-    // 6 Themed Celebration Landmarks & Zones (0-20%, 20-40%, 40-60%, 60-80%, 80-95%, 95-100%)
-    this.landmarks = [
-      { dist: 0, name: 'FESTIVAL ENTRANCE', icon: '🛕', shown: false },
-      { dist: 480, name: 'FESTIVAL STREET', icon: '🎊', shown: false },
-      { dist: 960, name: 'DHOL CHOWK', icon: '🥁', shown: false },
-      { dist: 1440, name: 'FLOWER BAZAAR', icon: '🌸', shown: false },
-      { dist: 1920, name: 'GRAND FESTIVAL NIGHT', icon: '🏮', shown: false },
-      { dist: 2280, name: 'GANESHA DESTINATION', icon: '🙏', shown: false }
-    ];
-
-    this.lastBlessingDist = 0;
     this.celebrationTimer = 0;
-
-    this.shakeTimer = 0;
-    this.shakeIntensity = 0;
-
     this.lastTimestamp = 0;
-    this.rafId = null;
 
     this.init();
   }
@@ -3996,25 +4134,57 @@ class Game {
     this.onResize();
     this.input.bindEvents();
     this.missions.generateMissions();
+
+    // Upfront WebGL GPU shader & buffer warmup pass
+    this.warmupGPU();
+
     this.showMenu();
 
-    this.rafId = requestAnimationFrame((ts) => this.gameLoop(ts));
+    requestAnimationFrame((ts) => this.gameLoop(ts));
+  }
+
+  warmupGPU() {
+    const hiddenObjects = [];
+    const culledObjects = [];
+
+    this.three.scene.traverse(obj => {
+      if (!obj.visible) {
+        hiddenObjects.push(obj);
+        obj.visible = true;
+      }
+      if (obj.frustumCulled) {
+        culledObjects.push(obj);
+        obj.frustumCulled = false;
+      }
+    });
+
+    // Render 1 frame with camera to upload all geometries and shaders to GPU
+    this.three.renderer.render(this.three.scene, this.three.camera);
+
+    // Restore original state cleanly
+    for (let i = 0; i < hiddenObjects.length; i++) {
+      hiddenObjects[i].visible = false;
+    }
+    for (let i = 0; i < culledObjects.length; i++) {
+      culledObjects[i].frustumCulled = true;
+    }
+
+    this.obstacles.reset();
+    this.collectibles.reset();
+    this.three.render();
   }
 
   onResize() {
     const container = document.getElementById('game-container');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const width = container.clientWidth;
     const height = container.clientHeight;
-
-    this.canvas.width = width * dpr;
-    this.canvas.height = height * dpr;
-    this.ctx.resetTransform();
-    this.ctx.scale(dpr, dpr);
-
     this.width = width;
     this.height = height;
-    this.perspective.resize(width, height);
+    this.three.resize(width, height);
+  }
+
+  hideAllScreens() {
+    document.querySelectorAll('.screen-overlay').forEach(el => el.classList.remove('active'));
   }
 
   showMenu() {
@@ -4022,7 +4192,7 @@ class Game {
     this.audio.stopDholRhythm();
     this.hideAllScreens();
     document.getElementById('screenStart').classList.add('active');
-    document.getElementById('startHighScore').textContent = this.highScore;
+    document.getElementById('startHighScore').textContent = Math.floor(this.highScore);
   }
 
   startRun() {
@@ -4038,17 +4208,15 @@ class Game {
     this.comboTimer = 0;
     this.bestCombo = 1;
     this.nearMissCount = 0;
-    this.lastBlessingDist = 0;
-    this.celebrationTimer = 0;
-
-    this.landmarks.forEach(lm => lm.shown = false);
+    this.lastTimestamp = performance.now();
 
     this.player.reset();
+    this.road.reset();
     this.obstacles.reset();
     this.collectibles.reset();
+    this.collectibles.seedInitialCollectibles();
     this.powerUps.reset();
     this.environment.reset();
-    this.particles.clear();
     this.missions.generateMissions();
 
     this.updateHUD();
@@ -4082,6 +4250,7 @@ class Game {
   resume() {
     if (this.state !== 'PAUSED') return;
     this.state = 'PLAYING';
+    this.lastTimestamp = performance.now();
     document.getElementById('screenPause').classList.remove('active');
     this.audio.startDholRhythm();
   }
@@ -4115,19 +4284,8 @@ class Game {
     if (this.state === 'DESTINATION_CELEBRATION' || this.state === 'FINALE') return;
     this.state = 'DESTINATION_CELEBRATION';
     this.celebrationTimer = 4.8;
-    this.celebrationPhase = 1;
-
     this.audio.playFinale();
     this.showBannerAlert("GANAPATI BAPPA MORYA! 🙏", 2200);
-
-    for (let i = 0; i < 80; i++) {
-      this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.4), 1, {
-        colors: ['#ffd152', '#ff6b1a', '#fff', '#f43f5e', '#38bdf8'],
-        minSpeed: 2,
-        maxSpeed: 8,
-        shape: 'spark'
-      });
-    }
   }
 
   showFinaleScreen() {
@@ -4147,165 +4305,47 @@ class Game {
 
     const mContainer = document.getElementById('finMissions');
     const compCount = this.missions.activeMissions.filter(m => m.completed).length;
-    mContainer.textContent = `🚩 Festival Journey Completed: ${compCount} / ${this.missions.activeMissions.length} Tasks • Reached Lord Ganesha! 🙏`;
+    if (mContainer) {
+      mContainer.textContent = `🚩 Festival Journey Completed: ${compCount} / ${this.missions.activeMissions.length} Tasks • Reached Lord Ganesha! 🙏`;
+    }
 
     document.getElementById('screenFinale').classList.add('active');
   }
 
-  hideAllScreens() {
-    document.querySelectorAll('.screen-overlay').forEach(el => el.classList.remove('active'));
-  }
-
-  showLandmark(name, icon = '📍') {
-    this.audio.playLandmarkChime();
-    const banner = document.getElementById('landmarkBanner');
-    const textEl = document.getElementById('landmarkText');
-    const iconEl = banner ? banner.querySelector('.landmark-icon') : null;
-    if (!banner || !textEl) return;
-
-    if (iconEl) iconEl.textContent = icon;
-    textEl.textContent = name;
-    banner.classList.add('active');
-    if (this.landmarkTimeout) clearTimeout(this.landmarkTimeout);
-    this.landmarkTimeout = setTimeout(() => {
-      banner.classList.remove('active');
-    }, 2800);
-
-    // Landmark celebratory burst
-    this.particles.spawn(this.width * 0.5, this.height * 0.22, 28, {
-      colors: ['#ffd152', '#ff6b1a', '#ff4d6d', '#fff'],
-      minSpeed: 2,
-      maxSpeed: 6.5,
-      shape: 'spark'
-    });
-  }
-
-  toggleSound() {
-    const isUnmuted = this.audio.toggleMute();
-    const soundText = isUnmuted ? '🔊' : '🔇';
-    document.getElementById('btnSoundToggle').textContent = soundText;
-    document.getElementById('btnToggleSoundPause').textContent = soundText + ' SOUND';
-    document.getElementById('startSoundIcon').textContent = soundText;
-  }
-
-  shareScore() {
-    const text = `🪔 I scored ${Math.floor(this.score)} points and reached Lord Ganesha in Ganapathi Rush 2.0! Ganapati Bappa Morya! 🙏`;
-    if (navigator.share) {
-      navigator.share({
-        title: 'Ganapathi Rush 2.0',
-        text: text,
-        url: window.location.href
-      }).catch(() => {});
-    } else if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(() => {
-        this.showToast('Score copied to clipboard! 📋');
-      });
-    }
-  }
-
   collectItem(item) {
     if (item.type === 'MODAK') {
-      this.audio.playModak();
       this.modaks++;
+      this.audio.playModak();
+      this.score += 10 * this.comboMultiplier * (this.powerUps.isDoubleScore ? 2 : 1);
       this.missions.track('MODAK', 1);
-
-      const basePoints = 10;
-      const scoreMul = this.powerUps.isDoubleScore ? 2 : 1;
-      const points = basePoints * this.comboMultiplier * scoreMul;
-      this.score += points;
 
       this.comboCount++;
       this.comboTimer = 3.6;
-      this.evaluateComboTier();
-
-      const proj = this.perspective.project(item.laneX, item.worldY, item.z);
-      this.particles.spawn(proj.x, proj.y, 8, {
-        colors: ['#ffd152', '#ff8426', '#fff'],
-        minSpeed: 1.5,
-        maxSpeed: 4.5
-      });
-
+      if (this.comboCount >= 5) {
+        this.comboMultiplier = Math.min(5, Math.floor(this.comboCount / 5) + 1);
+        if (this.comboMultiplier > this.bestCombo) {
+          this.bestCombo = this.comboMultiplier;
+        }
+        this.missions.track('COMBO', this.comboMultiplier);
+      }
     } else if (item.type === 'COIN') {
-      this.audio.playCoin();
       this.coins++;
-      this.score += 50 * (this.powerUps.isDoubleScore ? 2 : 1);
-      this.missions.track('COINS', 1);
-
-      const proj = this.perspective.project(item.laneX, item.worldY, item.z);
-      this.particles.spawn(proj.x, proj.y, 10, {
-        colors: ['#ffd152', '#f59e0b', '#ffffff'],
-        shape: 'spark',
-        minSpeed: 2,
-        maxSpeed: 5
-      });
+      this.audio.playCoin();
+      this.score += 5 * (this.powerUps.isDoubleScore ? 2 : 1);
+    } else {
+      this.powerUps.activate(item.type);
     }
 
     this.updateHUD();
   }
 
-  evaluateComboTier() {
-    let newTier = 1;
-    if (this.comboCount >= 30) newTier = 5;
-    else if (this.comboCount >= 20) newTier = 4;
-    else if (this.comboCount >= 10) newTier = 3;
-    else if (this.comboCount >= 5) newTier = 2;
-
-    if (newTier > this.comboMultiplier) {
-      this.comboMultiplier = newTier;
-      if (this.comboMultiplier > this.bestCombo) {
-        this.bestCombo = this.comboMultiplier;
-      }
-      this.audio.playComboUp(this.comboMultiplier);
-      this.showBannerAlert(`COMBO x${this.comboMultiplier}! 🔥`);
-      this.missions.track('COMBO', this.comboMultiplier);
-
-      const badge = document.getElementById('hudComboBadge');
-      if (badge) {
-        badge.classList.add('pulsing');
-        setTimeout(() => badge.classList.remove('pulsing'), 300);
-      }
-    }
-  }
-
-  triggerNearMiss(obstacle) {
+  triggerNearMiss(obs) {
     this.nearMissCount++;
+    this.score += 50 * this.comboMultiplier;
     this.audio.playNearMiss();
-    this.score += 150 * (this.powerUps.isDoubleScore ? 2 : 1);
-    this.comboCount += 2;
-    this.comboTimer = 3.6;
-    this.evaluateComboTier();
     this.missions.track('NEAR_MISS', 1);
-
-    this.showBannerAlert('NEAR MISS! +150 ✨');
-
-    const proj = this.perspective.project(this.player.currentLaneX, 10, 0);
-    this.particles.spawn(proj.x, proj.y, 14, {
-      colors: ['#ffd152', '#38bdf8', '#ffffff'],
-      shape: 'spark',
-      minSpeed: 3,
-      maxSpeed: 7
-    });
-
+    this.showBannerAlert(`NEAR MISS! +${50 * this.comboMultiplier} ✨`, 1200);
     this.updateHUD();
-  }
-
-  triggerBlessing() {
-    this.audio.playBlessing();
-    this.showBannerAlert("BAPPA'S BLESSING! 🙏✨");
-
-    this.powerUps.isDoubleScore = true;
-    this.powerUps.doubleScoreTimer = 14.0;
-    this.powerUps.hasShield = true;
-    this.powerUps.updateHUD();
-
-    for (let i = 0; i < 40; i++) {
-      this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.5), 1, {
-        colors: ['#ffd152', '#fff7eb', '#ff6b1a'],
-        minSpeed: 1,
-        maxSpeed: 4,
-        shape: 'spark'
-      });
-    }
   }
 
   checkCollisions() {
@@ -4315,18 +4355,34 @@ class Game {
       const obs = this.obstacles.obstacles[i];
       if (obs.hit) continue;
 
-      if (Math.abs(obs.z) < CONFIG.HIT_DEPTH_THRESHOLD) {
-        const laneDiff = Math.abs(this.player.currentLaneX - (obs.lane - 1));
-
-        if (laneDiff < CONFIG.PLAYER_HIT_W) {
+      const dz = Math.abs(obs.mesh.position.z - this.player.group.position.z);
+      if (dz < CONFIG.HIT_DEPTH_Z) {
+        const dx = Math.abs(this.player.currentX - CONFIG.LANES[obs.lane]);
+        if (dx < CONFIG.PLAYER_HIT_W) {
           let isHit = false;
 
           if (obs.type === 'TORAN') {
             if (!this.player.isSliding) {
               isHit = true;
             }
+          } else if (obs.type === 'BARRICADE') {
+            if (this.player.jumpY < 1.15) {
+              isHit = true;
+            }
+          } else if (obs.type === 'FLOWER_CART') {
+            if (this.player.jumpY < 1.35) {
+              isHit = true;
+            }
+          } else if (obs.type === 'DHOL_CART') {
+            if (this.player.jumpY < 1.55) {
+              isHit = true;
+            }
+          } else if (obs.type === 'AUTO_RICKSHAW') {
+            if (this.player.jumpY < 1.85) {
+              isHit = true;
+            }
           } else {
-            if (this.player.jumpY < 32) {
+            if (this.player.jumpY < 2.2) {
               isHit = true;
             }
           }
@@ -4344,13 +4400,6 @@ class Game {
   handlePlayerHit(obs) {
     if (this.powerUps.isBoostActive) {
       this.audio.playHit();
-      this.triggerScreenShake(8, 0.2);
-      const proj = this.perspective.project(obs.lane - 1, 10, obs.z);
-      this.particles.spawn(proj.x, proj.y, 25, {
-        colors: ['#ffd152', '#ff6b1a'],
-        minSpeed: 4,
-        maxSpeed: 9
-      });
       return;
     }
 
@@ -4358,45 +4407,23 @@ class Game {
       this.powerUps.hasShield = false;
       this.powerUps.updateHUD();
       this.audio.playShieldBreak();
-      this.player.invulnerableTimer = 0.8;
-      this.triggerScreenShake(6, 0.2);
+      this.player.invulnerableTimer = 0.85;
       this.showToast('DIVINE SHIELD ABSORBED HIT! 🛡️');
-
-      const proj = this.perspective.project(this.player.currentLaneX, 20, 0);
-      this.particles.spawn(proj.x, proj.y, 22, {
-        colors: ['#ffd152', '#38bdf8', '#ffffff'],
-        shape: 'spark',
-        minSpeed: 3,
-        maxSpeed: 8
-      });
       return;
     }
 
     this.lives--;
     this.updateLivesHUD();
     this.audio.playHit();
-    this.triggerScreenShake(12, 0.35);
     this.player.invulnerableTimer = CONFIG.INVULNERABLE_TIME;
 
     this.comboCount = 0;
     this.comboMultiplier = 1;
     this.comboTimer = 0;
 
-    const proj = this.perspective.project(this.player.currentLaneX, 20, 0);
-    this.particles.spawn(proj.x, proj.y, 25, {
-      colors: ['#d62828', '#ff6b1a', '#ffd152'],
-      minSpeed: 3,
-      maxSpeed: 8
-    });
-
     if (this.lives <= 0) {
       this.gameOver();
     }
-  }
-
-  triggerScreenShake(intensity, duration) {
-    this.shakeIntensity = intensity;
-    this.shakeTimer = duration;
   }
 
   showToast(message) {
@@ -4434,6 +4461,14 @@ class Game {
       comboFill.style.width = fillPct + '%';
     }
 
+    const pctEl = document.getElementById('hudJourneyPct');
+    const fillEl = document.getElementById('hudJourneyFill');
+    if (pctEl && fillEl) {
+      const pct = Math.min(100, Math.floor((this.distance / CONFIG.DESTINATION_DISTANCE) * 100));
+      pctEl.textContent = `${pct}%`;
+      fillEl.style.width = `${pct}%`;
+    }
+
     this.missions.updateHUD();
   }
 
@@ -4452,50 +4487,34 @@ class Game {
     });
   }
 
-  updateCoinsHUD() {
-    document.getElementById('hudCoins').textContent = this.coins;
-  }
-
-  // --------------------------------------------------------------------------
-  // MAIN RAF ANIMATION LOOP
-  // --------------------------------------------------------------------------
   gameLoop(timestamp) {
     if (!this.lastTimestamp) this.lastTimestamp = timestamp;
-    const dt = Math.min((timestamp - this.lastTimestamp) / 1000, 0.1);
+    const dt = Math.min(0.05, Math.max(0.001, (timestamp - this.lastTimestamp) / 1000));
     this.lastTimestamp = timestamp;
 
     if (this.state === 'PLAYING') {
-      this.update(dt);
+      this.updatePlaying(dt);
     } else if (this.state === 'DESTINATION_CELEBRATION') {
       this.updateCelebration(dt);
     }
 
-    this.render();
+    this.three.update(dt, this.player.currentX, this.player.jumpY, this.player.isSliding);
+    this.three.render();
 
-    this.rafId = requestAnimationFrame((ts) => this.gameLoop(ts));
+    requestAnimationFrame((ts) => this.gameLoop(ts));
   }
 
-  update(dt) {
-    let targetSpeed = CONFIG.BASE_SPEED + this.distance * CONFIG.SPEED_ACCEL;
-    if (this.powerUps.isBoostActive) targetSpeed *= 1.45;
+  updatePlaying(dt) {
+    let targetSpeed = CONFIG.BASE_SPEED + (this.distance * CONFIG.SPEED_ACCEL);
+    if (this.powerUps.isBoostActive) targetSpeed *= 1.5;
     if (this.powerUps.isSlowTime) targetSpeed *= 0.55;
     this.speed = Math.min(CONFIG.MAX_SPEED, targetSpeed);
 
-    const distanceDelta = this.speed * dt * 0.1;
-    this.distance += distanceDelta;
-    this.score += distanceDelta * 1.2 * (this.powerUps.isDoubleScore ? 2 : 1);
-    this.missions.track('DISTANCE', Math.floor(distanceDelta));
+    const moveDist = this.speed * dt;
+    this.distance += moveDist * 0.25;
+    this.score += moveDist * 0.3 * (this.powerUps.isDoubleScore ? 2 : 1);
+    this.missions.track('DISTANCE', Math.floor(moveDist * 0.25));
 
-    // Check Landmarks
-    for (let lm of this.landmarks) {
-      if (!lm.shown && this.distance >= lm.dist) {
-        lm.shown = true;
-        this.showLandmark(lm.name, lm.icon);
-        break;
-      }
-    }
-
-    // Combo Decay
     if (this.comboTimer > 0) {
       this.comboTimer -= dt;
       if (this.comboTimer <= 0) {
@@ -4505,133 +4524,39 @@ class Game {
       }
     }
 
-    // Rare Bappa's Blessing Event
-    if (this.distance - this.lastBlessingDist > 650 && Math.random() < 0.005) {
-      this.lastBlessingDist = this.distance;
-      this.triggerBlessing();
-    }
-
-    // Check Destination Reach Milestone (~2400m)
     if (this.distance >= CONFIG.DESTINATION_DISTANCE) {
       this.triggerGaneshaDestination();
       return;
     }
 
-    // Ambient floating marigold petals and golden sparkles
-    if (Math.random() < 0.35) {
-      const px = Math.random() * this.width;
-      const py = Math.random() * (this.height * 0.7);
-      this.particles.spawn(px, py, 1, {
-        colors: ['#ff8426', '#ffd152', '#f43f5e', '#ffba08'],
-        shape: 'petal',
-        minSpeed: 0.8,
-        maxSpeed: 2.5,
-        baseVx: 1.2,
-        baseVy: 0.8,
-        minSize: 2.5,
-        maxSize: 5.5,
-        minDecay: 0.015,
-        maxDecay: 0.025
-      });
-    }
-
-    // Update Subsystems
     this.player.update(dt);
-    this.obstacles.update(dt);
-    this.collectibles.update(dt);
-    this.powerUps.update(dt);
-    this.environment.update(dt);
-    this.particles.update(dt);
+    this.road.update(moveDist);
+    this.obstacles.update(dt, moveDist);
+    this.collectibles.update(dt, moveDist);
+    this.powerUps.update(dt, moveDist);
+    this.environment.update(moveDist, dt);
 
     this.checkCollisions();
-
-    if (this.shakeTimer > 0) {
-      this.shakeTimer -= dt;
-      if (this.shakeTimer <= 0) {
-        this.shakeIntensity = 0;
-      }
-    }
-
     this.updateHUD();
   }
 
   updateCelebration(dt) {
     this.celebrationTimer -= dt;
-
-    if (this.celebrationTimer <= 2.4 && this.celebrationPhase === 1) {
-      this.celebrationPhase = 2;
-      this.showBannerAlert("FESTIVAL COMPLETE! 🪔", 2200);
-    }
-
-    this.speed = Math.max(50, this.speed - 65 * dt);
-    this.distance += this.speed * dt * 0.1;
-    this.score += 220 * dt;
+    this.speed = Math.max(8.0, this.speed - 12.0 * dt);
+    const moveDist = this.speed * dt;
+    this.distance += moveDist * 0.25;
+    this.score += 40 * dt;
 
     this.player.update(dt);
-    this.environment.update(dt);
-    this.particles.update(dt);
-
-    if (Math.random() < 0.55) {
-      this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.35), 3, {
-        colors: ['#ffd152', '#ff6b1a', '#ff4d6d', '#38bdf8', '#fff', '#f59e0b'],
-        minSpeed: 3,
-        maxSpeed: 9,
-        shape: 'spark'
-      });
-      this.particles.spawn(Math.random() * this.width, Math.random() * (this.height * 0.3), 1, {
-        colors: ['#ff8426', '#ffd152', '#f43f5e'],
-        shape: 'petal',
-        minSpeed: 1,
-        maxSpeed: 3,
-        baseVx: 1.3,
-        baseVy: 1.2
-      });
-    }
-
-    if (Math.random() < 0.06) {
-      this.environment.spawnFirework();
-    }
+    this.road.update(moveDist);
+    this.obstacles.update(dt, moveDist);
+    this.environment.update(moveDist, dt);
 
     this.updateHUD();
 
     if (this.celebrationTimer <= 0) {
       this.showFinaleScreen();
     }
-  }
-
-  render() {
-    this.ctx.save();
-
-    if (this.shakeIntensity > 0) {
-      const shakeX = (Math.random() - 0.5) * this.shakeIntensity * 2;
-      const shakeY = (Math.random() - 0.5) * this.shakeIntensity * 2;
-      this.ctx.translate(shakeX, shakeY);
-    }
-
-    this.ctx.clearRect(0, 0, this.width, this.height);
-
-    // 1. Cinematic Sky & Horizon Ganesha Destination
-    this.environment.renderSky(this.ctx, this.width, this.height);
-
-    // 2. Road, Sidewalks, Curbs & Dense Roadside Scenery
-    this.environment.renderRoad(this.ctx);
-
-    // 3. Obstacles (sorted back-to-front)
-    this.obstacles.render(this.ctx);
-
-    // 4. Collectibles & Power-Up Tokens
-    this.collectibles.render(this.ctx);
-    this.powerUps.render(this.ctx);
-
-    // 5. Player Character & Auras
-    if (this.state === 'PLAYING' || this.state === 'PAUSED' || this.state === 'DESTINATION_CELEBRATION') {
-      this.player.render(this.ctx);
-    }
-
-    // 6. Particle FX & Ambient Petals
-    this.particles.render(this.ctx);
-
-    this.ctx.restore();
   }
 }
 

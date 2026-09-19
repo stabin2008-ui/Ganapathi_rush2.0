@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Ganapathi Rush 2.0 — Run • Collect • Celebrate</title>
   <meta name="description" content="Ganapathi Rush 2.0 is a fast-paced, festive 3-lane Ganesh Chaturthi runner game built with HTML5 Canvas 2D and Web Audio API.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪔</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -95,6 +96,18 @@
       <!-- Swipe Tutorial Hint (Fades out automatically during first run) -->
       <div id="swipeTutorialHint" class="swipe-hint">
         <span>SWIPE <strong>← →</strong> TO MOVE • <strong>↑</strong> TO JUMP • <strong>↓</strong> TO SLIDE</span>
+      </div>
+
+      <!-- On-Screen Mobile Navigation & Action Buttons -->
+      <div id="mobileControls" class="mobile-controls-bar">
+        <div class="mobile-nav-group left-group">
+          <button id="btnMobileLeft" class="mobile-nav-btn mobile-left" title="Move Left (← / A)" aria-label="Move Left">◀</button>
+          <button id="btnMobileRight" class="mobile-nav-btn mobile-right" title="Move Right (→ / D)" aria-label="Move Right">▶</button>
+        </div>
+        <div class="mobile-nav-group right-group">
+          <button id="btnMobileSlide" class="mobile-nav-btn mobile-action mobile-slide" title="Slide (↓ / S)" aria-label="Slide">▼</button>
+          <button id="btnMobileJump" class="mobile-nav-btn mobile-action mobile-jump" title="Jump (↑ / W / Space)" aria-label="Jump">▲</button>
+        </div>
       </div>
     </div>
 
@@ -294,6 +307,12 @@
     </div>
   </div>
 
+  <script src="three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
   <script src="game.js"></script>
 </body>
 </html>

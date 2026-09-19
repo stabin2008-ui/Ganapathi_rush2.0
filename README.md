@@ -1,27 +1,32 @@
 # 🪔 GANAPATHI RUSH 2.0 🐘
 > **"Run • Collect • Celebrate • Reach Bappa"**
+> **Cinematic True 3D Indian Ganesh Chaturthi Endless Runner**
 
-A fast-paced, visually rich 3-lane festival endless runner built from scratch for the auspicious occasion of **Ganesh Chaturthi**. Developed purely with **HTML5 Canvas 2D**, **Vanilla CSS3**, and the **Web Audio API** — zero dependencies, zero build steps, zero external assets, and fully playable offline.
+A visually stunning, cinematic 3-lane festival endless runner built for the auspicious occasion of **Ganesh Chaturthi**. Powered by **Three.js (WebGL)**, **Vanilla CSS3**, and the **Web Audio API** — featuring full volumetric 3D meshes, dynamic PCF soft shadow maps, wet asphalt reflections, stylized human anatomical runner character, rich Indian heritage Havelis, and a magnificent Lord Ganesha sanctum on the horizon.
 
 ---
 
-## 🌟 Game Concept: The Festival Journey
+## 🌟 Visual Quality & Atmosphere
 
-In **Ganapathi Rush 2.0**, you embark on a sacred festive pilgrimage towards Lord Ganesha's grand pandal. Starting at the celebratory **Festival Entrance**, dash through lively street celebrations, past fragrant flower bazaars, sweet modak stalls, dhol-tasha drummers, and cheering crowds waving saffron flags. 
-
-Your ultimate mission is to **complete festival tasks, survive the run, and reach the Grand Ganesha Destination** for the celebratory finale!
+Inspired by the grand celebrations of Ganesh Chaturthi in Maharashtra and across India:
+- **Athletic Human Devotee Runner**: Fully articulated 3D character with realistic proportions, layered saffron pagdi (turban) with jeweled Kalgi plume, cream silk kurta with embroidered mandarin collar and gold hem, pleated saffron dhoti, traditional pointed Mojari shoes with curled tips, and natural running kinematics.
+- **Cinematic Wet Reflective Street**: Dark asphalt with aggregate grain, damp patches, and specular reflections mirroring festival streetlights, vehicle headlights, and golden modaks.
+- **Rich Heritage Havelis**: 2-to-4 story architecture with sandstone jharokha balconies, carved pillars, and glowing jali windows emitting warm candlelight.
+- **Illuminated Marquee Signboards**: High-resolution signage in authentic Devanagari script ("मोदक / Modak Stall", "श्री गणेश स्वीट्स", "गणपति बाप्पा मोरया").
+- **Overhead Festival Canopy**: Sagging catenary fairy light strings, festive bunting flags, hanging 3D Akash Kandil star lanterns, and brass bells spanning across the street.
+- **Decorated Vehicles**: Authentic green/yellow Auto-Rickshaws and festival pickup trucks ("Chhota Hathi") carrying live 3D Dhol drummers.
+- **Distant Lord Ganesha Sanctum**: Colossal illuminated temple pandal on the far horizon with a seated 4-armed Lord Ganesha idol and radiant Prabhavali sunburst halo.
+- **Night Sky & Fireworks**: Deep twilight celestial sky with 3D glowing moon, starfield, floating marigold petals, and bursts of colorful fireworks.
 
 ---
 
 ## 🎮 Controls
 
 ### Mobile (Clean & Unobstructed Swipe Controls)
-The mobile layout offers a completely unobstructed view of the road without on-screen buttons covering gameplay.
 - **Swipe Left (`←`)**: Move one lane left.
 - **Swipe Right (`→`)**: Move one lane right.
-- **Swipe Up (`↑`)**: Jump over barricades, drums, and crates.
+- **Swipe Up (`↑`)**: Jump over barricades, drums, and carts.
 - **Swipe Down (`↓`)**: Slide under hanging torans or quick-drop from mid-air.
-- *Tip*: An elegant, non-intrusive swipe hint appears during your first run and automatically fades away after a few seconds.
 
 ### Desktop (Keyboard)
 | Action | Primary Key | Secondary Key |
@@ -35,53 +40,9 @@ The mobile layout offers a completely unobstructed view of the road without on-s
 
 ---
 
-## 🛕 Festival Landmarks Along the Route
-
-As you sprint toward Lord Ganesha, you will cross iconic celebration landmarks:
-1. 📍 **Festival Entrance** ($0\text{m}$ / $0\%$): Warm sunset sky, entrance arch gates, pedestal brass diyas, and welcome banners.
-2. 📍 **Festival Street** ($480\text{m}$ / $20\%$): Golden evening, modak sweets stalls, festive umbrellas, and cheering devotee families.
-3. 📍 **Dhol Chowk** ($960\text{m}$ / $40\%$): Blue/purple evening, thumping dhol-tasha drummers with animated beating arms, fluttering saffron flags, and floating flower petals.
-4. 📍 **Flower Bazaar** ($1440\text{m}$ / $60\%$): Vibrant flower bazaar stalls with cascading marigold curtains, rose heaps, and hanging torans.
-5. 📍 **Grand Festival Night** ($1920\text{m}$ / $80\%$): Deep starry festival night, glowing moon, towering illuminated pandals, hanging star kandil lanterns, and fireworks.
-6. 📍 **Ganesha Destination** ($2280\text{m}\text{--}2400\text{m}$ / $95\%\text{--}100\%$): The grand celebration destination where the giant illuminated idol with radiant Prabhavali halo awaits!
-
----
-
-## 🌺 Detailed Roadside Festival Atmosphere
-
-Both the left and right sides of the road are filled with lively procedural festival scenery:
-- **🍬 Modak Sweet Stalls**: Wooden festival stalls with red-and-yellow striped cloth canopies, tiered golden modak platters, and glowing diyas.
-- **🌼 Flower Bazaar Stalls**: Bamboo stalls draped in hanging orange and yellow marigold garlands and rose baskets.
-- **🥁 Dhol-Tasha Drummers**: Animated drummers in traditional saffron kurtas and pagdis whose arms beat drumsticks in rhythm with the game's music!
-- **🚩 Cheering Devotees**: Silhouettes waving sacred saffron flags and raising hands in celebration.
-- **🛕 Pandal Pillars**: Carved golden columns with green banana stems and coconuts.
-- **🌸 Floor Rangoli**: Colorful geometric floral rangoli artwork on the pedestrian walkways.
-- **🏮 Hanging Kandil Lanterns**: Star-shaped glowing lanterns and strings of fairy lights.
-
----
-
-## 🌅 Early Visible Ganesha Destination on Horizon
-
-You do not have to wait until the very end to catch a glimpse of Lord Ganesha!
-- **$0\text{--}600\text{m}$**: A radiant golden silhouette of Lord Ganesha with crown (Mukut), ears, curved trunk, and halo sits upon the horizon.
-- **$600\text{--}1400\text{m}$**: An illuminated pandal structure emerges around Ganesha with glowing spires and saffron flags.
-- **$1400\text{--}2200\text{m}$**: The pandal and idol grow larger, glowing with thousands of lights, floating diyas, and fireworks.
-- **$2400\text{m}+$**: The player arrives at the grand celebratory arena, triggering a 4-second grand celebration sequence with fireworks, flower showers, and **"GANAPATI BAPPA MORYA! 🙏"** before the Results Screen.
-
----
-
-## 🏆 Dual Ending System
-
-- **Ending A: Failed Run (Lives reach 0)**:
-  - Displays "RUN OVER" with final stats, festival tasks completed, and a prompt to run again with Bappa's blessings.
-- **Ending B: Journey Complete (Reached Grand Ganesha)**:
-  - Displays "FESTIVAL COMPLETE!", chanting **"GANAPATI BAPPA MORYA! 🙏"**, with high-score summary, journey celebration, and score sharing.
-
----
-
 ## 🍬 Collectibles, Combos & Power-Ups
 
-- **Modaks**: Golden pleated sweets granting $+10$ points and powering your combo multiplier ($5 \to \times 2, 10 \to \times 3, 20 \to \times 4, 30 \to \times 5$).
+- **Pleated Golden Modaks**: Fluted 3D sweets with saffron kesar strand granting $+10$ points and powering your combo multiplier ($5 \to \times 2, 10 \to \times 3, 20 \to \times 4, 30 \to \times 5$).
 - **🪙 Festival Coins**: Collectible tokens granting $+50$ bonus points.
 - **Near Misses**: Narrowly skim past obstacles to earn $+150$ bonus score and a combo boost.
 - **6 Divine Power-Ups**:
@@ -94,27 +55,27 @@ You do not have to wait until the very end to catch a glimpse of Lord Ganesha!
 
 ---
 
-## 🛠️ Technology & Single-Loop Performance
+## 🛠️ Technology Stack
 
-- **Rendering**: HTML5 Canvas 2D with dynamic Device Pixel Ratio (DPR) scaling.
-- **Styling**: Vanilla CSS3 with glassmorphic tokens, zero external CSS libraries.
-- **Audio**: Procedural Web Audio API synthesizing all 12 sound effects and the background dholak rhythm without loading any MP3/WAV files.
-- **Main Loop**: Exactly ONE `requestAnimationFrame` loop with delta-time capping ($\le 0.1\text{s}$) to maintain silky 60 FPS performance.
+- **Renderer**: Three.js (WebGL) with `THREE.WebGLRenderer`, `PCFSoftShadowMap`, `THREE.PerspectiveCamera`, and exponential depth fog.
+- **Lighting Hierarchy**: Ambient midnight fill, warm hemisphere ground bounce (`0xf59e0b`), directional moonlight with shadow maps, player rim lighting, and moving point lights.
+- **Styling**: Vanilla CSS3 with glassmorphic tokens, zero external CSS dependencies.
+- **Audio**: Procedural Web Audio API synthesizing all sound effects and rhythmic dholak percussion without external sound files.
 
 ---
 
 ## 🚀 How to Run Locally
 
-Double-click `index.html` or run with any static HTTP server:
+Double-click `index.html` or run with any local static HTTP server:
 ```bash
 # Node.js
-npx -y serve -l 8000 .
+node -e "const http=require('http'),fs=require('fs'),path=require('path'); const mime={'html':'text/html','js':'application/javascript','css':'text/css'}; http.createServer((q,s)=>{ let p=q.url.split('?')[0]; if(p==='/'||p==='') p='/index.html'; const f=path.join(__dirname,p); if(!fs.existsSync(f)) return s.writeHead(404).end('Not Found'); s.writeHead(200,{'Content-Type':mime[path.extname(f).slice(1)]||'text/plain'}); fs.createReadStream(f).pipe(s); }).listen(3000,()=>console.log('Running at http://localhost:3000'));"
 ```
-Then visit `http://localhost:8000`.
+Then visit `http://localhost:3000`.
 
 ---
 
-## 📜 Credits & Dedication
+## 📜 Dedication
 
 Crafted with devotion for **Ganesh Chaturthi**.
 May Lord Ganesha remove all obstacles and bring joy, health, and prosperity!
